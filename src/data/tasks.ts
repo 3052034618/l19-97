@@ -20,7 +20,10 @@ export const mockTasks: Task[] = [
         content: '已创建任务，分配给后勤王老师跟进',
         timestamp: '2026-06-19 10:30'
       }
-    ]
+    ],
+    coAssistants: [],
+    urgeRecords: [],
+    transferRecords: []
   },
   {
     id: 'task2',
@@ -55,7 +58,10 @@ export const mockTasks: Task[] = [
         content: '已与学生会沟通，征集学生代表5名参加听证会',
         timestamp: '2026-06-19 09:15'
       }
-    ]
+    ],
+    coAssistants: [],
+    urgeRecords: [],
+    transferRecords: []
   },
   {
     id: 'task3',
@@ -83,7 +89,10 @@ export const mockTasks: Task[] = [
         content: '已在楼栋微信群发布官方说明，正在逐楼层沟通重点关注对象',
         timestamp: '2026-06-19 09:00'
       }
-    ]
+    ],
+    coAssistants: [],
+    urgeRecords: [],
+    transferRecords: []
   },
   {
     id: 'task4',
@@ -119,7 +128,10 @@ export const mockTasks: Task[] = [
         content: '已通过各学院教学秘书通知到全体学生，共收到12份申请均已妥善处理',
         timestamp: '2026-06-19 08:30'
       }
-    ]
+    ],
+    coAssistants: [],
+    urgeRecords: [],
+    transferRecords: []
   },
   {
     id: 'task5',
@@ -155,6 +167,9 @@ export const mockTasks: Task[] = [
         content: '第二次抢票顺利完成，学生反馈良好，负面讨论下降70%',
         timestamp: '2026-06-18 22:00'
       }
-    ]
+    ],
+    coAssistants: [],
+    urgeRecords: [],
+    transferRecords: []
   }
 ];

@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import Taro from '@tarojs/taro';
-import { Topic, Task, DailyOverview } from '@/types';
+import { Topic, Task, DailyOverview, TaskLog } from '@/types';
 import { mockTopics, mockDailyOverview, topicCategories } from '@/data/topics';
 import { mockTasks } from '@/data/tasks';
+import { nowLocaleString } from '@/utils';
 
 const STORAGE_KEY_TOPICS = 'campus_op_topics_v1';
 const STORAGE_KEY_TASKS = 'campus_op_tasks_v1';
@@ -19,11 +20,24 @@ interface AppContextType extends AppState {
   toggleSubscribe: (topicId: string) => void;
   addCustomTopic: (name: string, categoryIcon?: string) => void;
   updateTaskStatus: (taskId: string, status: Task['status']) => void;
-  addTaskLog: (taskId: string, content: string, operator: string, role: Task['assigneeRole']) => void;
-  createTask: (task: Omit<Task, 'id' | 'createdAt' | 'logs'>) => void;
+  addTaskLog: (taskId: string, content: string, operator: string, role: Task['assigneeRole'], logType?: TaskLog['logType']) => void;
+  createTask: (task: Omit<Task, 'id' | 'createdAt' | 'logs' | 'coAssistants' | 'urgeRecords' | 'transferRecords'>) => string;
   setTaskEffectiveness: (taskId: string, effectiveness: number) => void;
   refreshOverview: () => void;
+  urgeTask: (taskId: string, remark?: string) => void;
+  addCoAssistant: (taskId: string, name: string, role: Task['assigneeRole']) => void;
+  transferTask: (taskId: string, toName: string, toRole: Task['assigneeRole'], remark?: string) => void;
 }
+
+const normalizeTask = (t: Task): Task => {
+  return {
+    ...t,
+    coAssistants: t.coAssistants ?? [],
+    urgeRecords: t.urgeRecords ?? [],
+    transferRecords: t.transferRecords ?? [],
+    logs: t.logs ?? []
+  };
+};
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -108,7 +122,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const [tasks, setTasks] = useState<Task[]>(() => {
     const local = loadFromStorage<Task[]>(STORAGE_KEY_TASKS, []);
-    return local.length > 0 ? local : mockTasks;
+    const source = local.length > 0 ? local : mockTasks;
+    return source.map(normalizeTask);
   });
 
   const [overview, setOverview] = useState<DailyOverview>(() => {
@@ -170,12 +185,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, []);
 
   const addTaskLog = useCallback(
-    (taskId: string, content: string, operator: string, role: Task['assigneeRole']) => {
+    (taskId: string, content: string, operator: string, role: Task['assigneeRole'], logType: TaskLog['logType'] = 'normal') => {
       setTasks(prev =>
         prev.map(t =>
           t.id === taskId
             ? {
-                ...t,
+                ...normalizeTask(t),
                 logs: [
                   ...t.logs,
                   {
@@ -183,7 +198,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     operator,
                     role,
                     content,
-                    timestamp: new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-')
+                    logType,
+                    timestamp: nowLocaleString()
                   }
                 ]
               }
@@ -194,29 +210,143 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     []
   );
 
-  const createTask = useCallback((taskData: Omit<Task, 'id' | 'createdAt' | 'logs'>) => {
-    const now = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
+  const createTask = useCallback((taskData: Omit<Task, 'id' | 'createdAt' | 'logs' | 'coAssistants' | 'urgeRecords' | 'transferRecords'>) => {
+    const now = nowLocaleString();
     const newTask: Task = {
       ...taskData,
       id: `task_${Date.now()}`,
       createdAt: now,
+      coAssistants: [],
+      urgeRecords: [],
+      transferRecords: [],
       logs: [
         {
           id: `log_${Date.now()}_init`,
           operator: '我',
           role: 'propaganda',
           content: '任务已创建',
+          logType: 'normal',
           timestamp: now
         }
       ]
     };
-    setTasks(prev => [newTask, ...prev]);
+    setTasks(prev => [newTask, ...prev.map(normalizeTask)]);
     return newTask.id;
+  }, []);
+
+  const urgeTask = useCallback((taskId: string, remark?: string) => {
+    const now = nowLocaleString();
+    const logContent = remark ? `【催办】${remark}` : '【催办】提醒加快处理进度';
+    setTasks(prev =>
+      prev.map(t =>
+        t.id === taskId
+          ? {
+              ...normalizeTask(t),
+              urgeRecords: [
+                ...(t.urgeRecords || []),
+                {
+                  id: `urge_${Date.now()}`,
+                  operator: '我',
+                  operatorRole: 'propaganda',
+                  remark,
+                  timestamp: now
+                }
+              ],
+              logs: [
+                ...t.logs,
+                {
+                  id: `log_${Date.now()}_urge`,
+                  operator: '我',
+                  role: 'propaganda',
+                  content: logContent,
+                  logType: 'urge',
+                  timestamp: now
+                }
+              ]
+            }
+          : t
+      )
+    );
+  }, []);
+
+  const addCoAssistant = useCallback((taskId: string, name: string, role: Task['assigneeRole']) => {
+    const now = nowLocaleString();
+    const roleName = { counselor: '辅导员', logistics: '后勤', academic: '教务', propaganda: '宣传部' }[role];
+    setTasks(prev =>
+      prev.map(t =>
+        t.id === taskId
+          ? {
+              ...normalizeTask(t),
+              coAssistants: [
+                ...(t.coAssistants || []),
+                {
+                  name,
+                  role,
+                  addedAt: now,
+                  addedBy: '我'
+                }
+              ],
+              logs: [
+                ...t.logs,
+                {
+                  id: `log_${Date.now()}_co`,
+                  operator: '我',
+                  role: 'propaganda',
+                  content: `【追加协办】邀请${roleName}${name}协助处理`,
+                  logType: 'coassist',
+                  timestamp: now
+                }
+              ]
+            }
+          : t
+      )
+    );
+  }, []);
+
+  const transferTask = useCallback((taskId: string, toName: string, toRole: Task['assigneeRole'], remark?: string) => {
+    const now = nowLocaleString();
+    setTasks(prev =>
+      prev.map(t => {
+        if (t.id !== taskId) return t;
+        const fromName = t.assignee;
+        const fromRole = t.assigneeRole;
+        const toRoleName = { counselor: '辅导员', logistics: '后勤', academic: '教务', propaganda: '宣传部' }[toRole];
+        const transferRemark = remark ? `（备注：${remark}）` : '';
+        return {
+          ...normalizeTask(t),
+          assignee: toName,
+          assigneeRole: toRole,
+          transferRecords: [
+            ...(t.transferRecords || []),
+            {
+              id: `trans_${Date.now()}`,
+              fromName,
+              fromRole,
+              toName,
+              toRole,
+              remark,
+              timestamp: now
+            }
+          ],
+          logs: [
+            ...t.logs,
+            {
+              id: `log_${Date.now()}_trans`,
+              operator: '我',
+              role: 'propaganda',
+              content: `【转办】任务已转交${toRoleName}${toName}处理${transferRemark}`,
+              logType: 'transfer',
+              timestamp: now
+            }
+          ]
+        };
+      })
+    );
   }, []);
 
   const setTaskEffectiveness = useCallback((taskId: string, effectiveness: number) => {
     setTasks(prev =>
-      prev.map(t => (t.id === taskId ? { ...t, effectiveness } : t))
+      prev.map(t => (t.id === taskId ? { ...normalizeTask(t), effectiveness } : t))
     );
   }, []);
 
@@ -233,7 +363,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addTaskLog,
         createTask,
         setTaskEffectiveness,
-        refreshOverview
+        refreshOverview,
+        urgeTask,
+        addCoAssistant,
+        transferTask
       }}
     >
       {children}

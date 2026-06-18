@@ -83,6 +83,32 @@ export interface TaskLog {
   role: AssigneeRole;
   content: string;
   timestamp: string;
+  logType?: 'normal' | 'urge' | 'transfer' | 'coassist' | 'effectiveness';
+}
+
+export interface CoAssistant {
+  name: string;
+  role: AssigneeRole;
+  addedAt: string;
+  addedBy: string;
+}
+
+export interface UrgeRecord {
+  id: string;
+  operator: string;
+  operatorRole: AssigneeRole;
+  remark?: string;
+  timestamp: string;
+}
+
+export interface TransferRecord {
+  id: string;
+  fromName: string;
+  fromRole: AssigneeRole;
+  toName: string;
+  toRole: AssigneeRole;
+  remark?: string;
+  timestamp: string;
 }
 
 export interface Task {
@@ -98,6 +124,9 @@ export interface Task {
   dueDate: string;
   logs: TaskLog[];
   effectiveness?: number;
+  coAssistants: CoAssistant[];
+  urgeRecords: UrgeRecord[];
+  transferRecords: TransferRecord[];
 }
 
 export interface DailyOverview {

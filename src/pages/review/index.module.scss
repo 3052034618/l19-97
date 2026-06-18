@@ -280,3 +280,198 @@
   font-size: 20rpx;
   font-weight: $font-weight-semibold;
 }
+
+.tabBar {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+  overflow-x: auto;
+  padding: $spacing-xs 0;
+}
+
+.tabItem {
+  flex: 1;
+  min-width: 140rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-md $spacing-sm;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  border: 2rpx solid transparent;
+  transition: all 0.2s;
+  position: relative;
+
+  &.tabActive {
+    background: rgba(22, 93, 255, 0.08);
+    border-color: #165DFF;
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+.tabIcon {
+  font-size: 32rpx;
+  margin-bottom: 4rpx;
+}
+
+.tabLabel {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: $color-text-secondary;
+
+  .tabActive & {
+    color: #165DFF;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.tabBadge {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  padding: 0 8rpx;
+  border-radius: 16rpx;
+  background: #F53F3F;
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: $font-weight-bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closureSection {
+  margin-top: $spacing-md;
+  padding: $spacing-md;
+  background: rgba(22, 93, 255, 0.04);
+  border-radius: $radius-md;
+}
+
+.closureHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.closureTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.closureMissing {
+  font-size: $font-size-xs;
+  color: #FF7D00;
+  font-weight: $font-weight-medium;
+}
+
+.progressBar {
+  height: 12rpx;
+  background: #e5e6eb;
+  border-radius: 6rpx;
+  overflow: hidden;
+  margin-bottom: $spacing-sm;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 6rpx;
+  transition: width 0.3s ease;
+}
+
+.closureSteps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: $spacing-xs;
+}
+
+.missingStep {
+  display: flex;
+  align-items: center;
+  padding: 4rpx 12rpx;
+  background: rgba(255, 125, 0, 0.08);
+  border-radius: $radius-xs;
+}
+
+.missingDot {
+  color: #FF7D00;
+  font-size: 20rpx;
+  margin-right: 6rpx;
+}
+
+.missingText {
+  font-size: 20rpx;
+  color: #FF7D00;
+}
+
+.completedStep {
+  display: flex;
+  align-items: center;
+  padding: 4rpx 12rpx;
+  background: rgba(0, 180, 42, 0.08);
+  border-radius: $radius-xs;
+}
+
+.completedDot {
+  color: #00B42A;
+  font-size: 20rpx;
+  margin-right: 6rpx;
+  font-weight: $font-weight-bold;
+}
+
+.completedText {
+  font-size: 20rpx;
+  color: #00B42A;
+}
+
+.urgentCard {
+  border-color: rgba(245, 63, 63, 0.4) !important;
+  background: rgba(245, 63, 63, 0.02);
+}
+
+.urgeBadgeRow,
+.coAssistBadgeRow,
+.transferBadgeRow {
+  margin-top: $spacing-xs;
+}
+
+.urgeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 12rpx;
+  background: rgba(245, 63, 63, 0.1);
+  color: #F53F3F;
+  border-radius: $radius-xs;
+  font-size: 20rpx;
+  font-weight: $font-weight-medium;
+}
+
+.coAssistBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 12rpx;
+  background: rgba(22, 93, 255, 0.1);
+  color: #165DFF;
+  border-radius: $radius-xs;
+  font-size: 20rpx;
+  font-weight: $font-weight-medium;
+}
+
+.transferBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 12rpx;
+  background: rgba(255, 125, 0, 0.1);
+  color: #FF7D00;
+  border-radius: $radius-xs;
+  font-size: 20rpx;
+  font-weight: $font-weight-medium;
+}

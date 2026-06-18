@@ -389,3 +389,117 @@
   font-weight: $font-weight-bold;
   color: $color-success;
 }
+
+.urgentTag {
+  background: rgba(245, 63, 63, 0.1);
+  color: #F53F3F;
+  font-weight: $font-weight-semibold;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.coAssistantTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+  background: rgba(22, 93, 255, 0.1);
+  color: #165DFF;
+  font-size: 20rpx;
+}
+
+.dueStatusTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+  font-size: 20rpx;
+  font-weight: $font-weight-medium;
+}
+
+.urgentRow {
+  background: rgba(245, 63, 63, 0.04);
+  border-radius: $radius-md;
+  padding: $spacing-sm $spacing-sm;
+  margin: 0 -$spacing-sm;
+}
+
+.actionBar {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+  padding: 0;
+}
+
+.actionBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-md $spacing-sm;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  transition: all 0.2s;
+
+  &:active {
+    transform: scale(0.96);
+    opacity: 0.8;
+  }
+}
+
+.actionIcon {
+  font-size: 40rpx;
+  margin-bottom: 4rpx;
+}
+
+.actionText {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+}
+
+.roleOptions {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+  flex-wrap: wrap;
+}
+
+.roleOption {
+  flex: 1;
+  min-width: 140rpx;
+  padding: $spacing-md $spacing-sm;
+  border-radius: $radius-md;
+  background: $color-bg-hover;
+  text-align: center;
+  border: 2rpx solid transparent;
+  transition: all $transition-base;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &.active {
+    border-color: $color-primary;
+    background: $color-primary-bg;
+  }
+}
+
+.formInput {
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  margin-bottom: $spacing-lg;
+
+  Input {
+    width: 100%;
+    font-size: $font-size-sm;
+  }
+}

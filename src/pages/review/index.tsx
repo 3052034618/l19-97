@@ -1,13 +1,25 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
+import classnames from 'classnames';
 import { useApp } from '@/store';
 import { RISK_LEVEL_MAP, TASK_STATUS_MAP, ASSIGNEE_ROLE_MAP } from '@/types';
+import { getClosureProgress, getLatestTaskLog, getDueStatus } from '@/utils';
 import RiskLevelBadge from '@/components/RiskLevelBadge';
 import styles from './index.module.scss';
 
+type FilterTab = 'all' | 'intervene' | 'warming' | 'unclosed';
+
+const TAB_OPTIONS: { key: FilterTab; label: string; icon: string }[] = [
+  { key: 'all', label: '全部', icon: '📋' },
+  { key: 'intervene', label: '需介入', icon: '🚨' },
+  { key: 'warming', label: '升温中', icon: '🔥' },
+  { key: 'unclosed', label: '未闭环', icon: '⏳' }
+];
+
 const ReviewPage: React.FC = () => {
   const { topics, tasks } = useApp();
+  const [activeTab, setActiveTab] = useState<FilterTab>('all');
 
   const highRiskTopics = useMemo(() => {
     return topics
@@ -17,6 +29,22 @@ const ReviewPage: React.FC = () => {
         return (order[a.riskLevel] ?? 99) - (order[b.riskLevel] ?? 99) || b.heat - a.heat;
       });
   }, [topics]);
+
+  const filteredTopics = useMemo(() => {
+    switch (activeTab) {
+      case 'intervene':
+        return highRiskTopics.filter(t => t.riskLevel === 'intervene');
+      case 'warming':
+        return highRiskTopics.filter(t => t.riskLevel === 'warming');
+      case 'unclosed':
+        return highRiskTopics.filter(t => {
+          const relatedTasks = tasks.filter(task => task.topicId === t.id);
+          return relatedTasks.some(task => task.status !== 'completed') || relatedTasks.length === 0;
+        });
+      default:
+        return highRiskTopics;
+    }
+  }, [activeTab, highRiskTopics, tasks]);
 
   const allHighRiskTasks = useMemo(() => {
     return tasks.filter(t => {
@@ -39,11 +67,8 @@ const ReviewPage: React.FC = () => {
 
   const getLatestLog = (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
-    if (!task || task.logs.length === 0) return null;
-    const logs = [...task.logs].sort((a, b) =>
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-    return logs[logs.length - 1];
+    if (!task) return null;
+    return getLatestTaskLog(task);
   };
 
   const unfinishedTasks = allHighRiskTasks.filter(t => t.status !== 'completed');
@@ -54,7 +79,7 @@ const ReviewPage: React.FC = () => {
       <View className={styles.header}>
         <Text className={styles.pageTitle}>今日风险复盘</Text>
         <Text className={styles.pageSubtitle}>
-          {new Date().toLocaleDateString('zh-CN')} · 快速掌握待闭环事项
+          {new Date().toLocaleDateString('zh-CN')} · 值班简报 · 快速掌握待闭环事项
         </Text>
       </View>
 
@@ -89,22 +114,51 @@ const ReviewPage: React.FC = () => {
         </View>
       </View>
 
+      {/* Tab 筛选栏 */}
+      <View className={styles.tabBar}>
+        {TAB_OPTIONS.map(tab => {
+          let count = 0;
+          if (tab.key === 'all') count = highRiskTopics.length;
+          else if (tab.key === 'intervene') count = highRiskTopics.filter(t => t.riskLevel === 'intervene').length;
+          else if (tab.key === 'warming') count = highRiskTopics.filter(t => t.riskLevel === 'warming').length;
+          else if (tab.key === 'unclosed') count = highRiskTopics.filter(t => {
+            const relatedTasks = tasks.filter(task => task.topicId === t.id);
+            return relatedTasks.some(task => task.status !== 'completed') || relatedTasks.length === 0;
+          }).length;
+
+          return (
+            <View
+              key={tab.key}
+              className={classnames(styles.tabItem, activeTab === tab.key && styles.tabActive)}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              <Text className={styles.tabIcon}>{tab.icon}</Text>
+              <Text className={styles.tabLabel}>{tab.label}</Text>
+              {count > 0 && (
+                <View className={styles.tabBadge}>{count}</View>
+              )}
+            </View>
+          );
+        })}
+      </View>
+
       {/* 高风险话题及其任务进展 */}
       <View className={styles.section}>
         <View className={styles.sectionHeader}>
           <Text className={styles.sectionIcon}>🚨</Text>
           <Text className={styles.sectionTitle}>高风险话题 + 处置进展</Text>
-          <Text className={styles.sectionCount}>{highRiskTopics.length}个需关注</Text>
+          <Text className={styles.sectionCount}>{filteredTopics.length}个需关注</Text>
         </View>
 
-        {highRiskTopics.length === 0 ? (
-          <View className={styles.emptyTip}>✨ 暂无高风险话题，今日态势平稳</View>
+        {filteredTopics.length === 0 ? (
+          <View className={styles.emptyTip}>✨ 该维度下暂无话题，今日态势平稳</View>
         ) : (
-          highRiskTopics.map(topic => {
+          filteredTopics.map(topic => {
             const riskInfo = RISK_LEVEL_MAP[topic.riskLevel];
             const relatedTasks = tasks.filter(t => t.topicId === topic.id);
             const unclosedTask = relatedTasks.find(t => t.status !== 'completed');
             const latestLog = unclosedTask ? getLatestLog(unclosedTask.id) : null;
+            const closureProgress = getClosureProgress(topic, relatedTasks);
 
             return (
               <View
@@ -139,6 +193,51 @@ const ReviewPage: React.FC = () => {
                   </Text>
                 )}
 
+                {/* 闭环进度条 */}
+                <View className={styles.closureSection}>
+                  <View className={styles.closureHeader}>
+                    <Text className={styles.closureTitle}>
+                      🎯 闭环进度 {closureProgress.percent}%
+                    </Text>
+                    <Text className={styles.closureMissing}>
+                      {closureProgress.missing.length > 0
+                        ? `还差 ${closureProgress.missing.length} 步`
+                        : '✅ 已全部闭环'}
+                    </Text>
+                  </View>
+                  <View className={styles.progressBar}>
+                    <View
+                      className={styles.progressFill}
+                      style={{
+                        width: `${closureProgress.percent}%`,
+                        background: closureProgress.percent === 100
+                          ? 'linear-gradient(90deg, #00B42A, #23C343)'
+                          : 'linear-gradient(90deg, #165DFF, #4080FF)'
+                      }}
+                    />
+                  </View>
+                  {closureProgress.missing.length > 0 && (
+                    <View className={styles.closureSteps}>
+                      {closureProgress.missing.map((step, idx) => (
+                        <View key={idx} className={styles.missingStep}>
+                          <Text className={styles.missingDot}>○</Text>
+                          <Text className={styles.missingText}>{step}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  {closureProgress.steps.length > 0 && (
+                    <View className={styles.closureSteps}>
+                      {closureProgress.steps.map((step, idx) => (
+                        <View key={idx} className={styles.completedStep}>
+                          <Text className={styles.completedDot}>✓</Text>
+                          <Text className={styles.completedText}>{step}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
                 {relatedTasks.length > 0 && (
                   <View className={styles.taskPreview}>
                     {unclosedTask ? (
@@ -166,6 +265,11 @@ const ReviewPage: React.FC = () => {
                         <View className={styles.taskAssignee}>
                           👤 {unclosedTask.assignee}（{ASSIGNEE_ROLE_MAP[unclosedTask.assigneeRole]}）
                           <Text style={{ marginLeft: '12rpx' }}>· 截止 {unclosedTask.dueDate.slice(5)}</Text>
+                          {getDueStatus(unclosedTask).urgent && (
+                            <Text style={{ marginLeft: '12rpx', color: '#F53F3F' }}>
+                              ⚠️ {getDueStatus(unclosedTask).label}
+                            </Text>
+                          )}
                         </View>
                         {latestLog && (
                           <Text className={styles.latestLog}>
@@ -219,10 +323,11 @@ const ReviewPage: React.FC = () => {
 
           {unfinishedTasks.map(task => {
             const tInfo = TASK_STATUS_MAP[task.status];
+            const dueStatus = getDueStatus(task);
             return (
               <View
                 key={task.id}
-                className={styles.topicCard}
+                className={classnames(styles.topicCard, dueStatus.urgent && styles.urgentCard)}
                 onClick={() => openTask(task.id)}
               >
                 <View className={styles.topicHeader}>
@@ -250,8 +355,40 @@ const ReviewPage: React.FC = () => {
                 <View className={styles.topicMetaRow}>
                   <View className={styles.metaChip}>📌 {task.topicName}</View>
                   <View className={styles.metaChip}>👤 {task.assignee}</View>
-                  <View className={styles.metaChip}>📅 截止 {task.dueDate.slice(5)}</View>
+                  <View
+                    className={styles.metaChip}
+                    style={{
+                      background: dueStatus.urgent ? 'rgba(245, 63, 63, 0.1)' : undefined,
+                      color: dueStatus.urgent ? '#F53F3F' : undefined
+                    }}
+                  >
+                    📅 {dueStatus.label}
+                  </View>
                 </View>
+
+                {task.urgeRecords.length > 0 && (
+                  <View className={styles.urgeBadgeRow}>
+                    <Text className={styles.urgeBadge}>
+                      ⏰ 已催办 {task.urgeRecords.length} 次
+                    </Text>
+                  </View>
+                )}
+
+                {task.coAssistants.length > 0 && (
+                  <View className={styles.coAssistBadgeRow}>
+                    <Text className={styles.coAssistBadge}>
+                      🤝 协办人：{task.coAssistants.map(ca => ca.name).join('、')}
+                    </Text>
+                  </View>
+                )}
+
+                {task.transferRecords.length > 0 && (
+                  <View className={styles.transferBadgeRow}>
+                    <Text className={styles.transferBadge}>
+                      🔄 已转办 {task.transferRecords.length} 次
+                    </Text>
+                  </View>
+                )}
 
                 {getLatestLog(task.id) && (
                   <Text className={styles.latestLog}>
