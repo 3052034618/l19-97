@@ -1,0 +1,128 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-lg;
+}
+
+.title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.subtitle {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.thermometer {
+  position: relative;
+  height: 48rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(90deg, 
+    $color-risk-calm 0%, 
+    $color-risk-calm 25%, 
+    $color-risk-attention 25%, 
+    $color-risk-attention 50%, 
+    $color-risk-warming 50%, 
+    $color-risk-warming 75%, 
+    $color-risk-intervene 75%, 
+    $color-risk-intervene 100%
+  );
+  overflow: visible;
+  margin-bottom: $spacing-md;
+}
+
+.pointer {
+  position: absolute;
+  top: -12rpx;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: left $transition-base ease;
+}
+
+.pointerDot {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: $radius-round;
+  background: $color-bg-card;
+  border: 4rpx solid $color-primary;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+}
+
+.pointerArrow {
+  width: 0;
+  height: 0;
+  border-left: 10rpx solid transparent;
+  border-right: 10rpx solid transparent;
+  border-top: 10rpx solid $color-primary;
+  margin-top: -2rpx;
+}
+
+.labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: $spacing-sm;
+}
+
+.labelItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.labelColor {
+  width: 40rpx;
+  height: 8rpx;
+  border-radius: $radius-xs;
+  margin-bottom: 8rpx;
+
+  &.calm { background: $color-risk-calm; }
+  &.attention { background: $color-risk-attention; }
+  &.warming { background: $color-risk-warming; }
+  &.intervene { background: $color-risk-intervene; }
+}
+
+.labelText {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-around;
+  margin-top: $spacing-lg;
+  padding-top: $spacing-lg;
+  border-top: 1rpx solid $color-divider;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.statValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+.statLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}

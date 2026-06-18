@@ -1,0 +1,46 @@
+// ============================================
+// 主题配色变量
+// ============================================
+
+// 品牌主题色
+$color-primary: #1d39c4;
+$color-primary-light: #4a63d9;
+$color-primary-dark: #0f2491;
+$color-primary-bg: rgba(29, 57, 196, 0.08);
+
+// 辅助色
+$color-secondary: #0ea5e9;
+$color-secondary-light: #38bdf8;
+
+// 功能色
+$color-success: #00b42a;
+$color-warning: #ff7d00;
+$color-error: #f53f3f;
+$color-info: #165dff;
+
+// 风险等级色
+$color-risk-calm: #00b42a;
+$color-risk-attention: #165dff;
+$color-risk-warming: #ff7d00;
+$color-risk-intervene: #f53f3f;
+
+$color-risk-calm-bg: rgba(0, 180, 42, 0.1);
+$color-risk-attention-bg: rgba(22, 93, 255, 0.1);
+$color-risk-warming-bg: rgba(255, 125, 0, 0.1);
+$color-risk-intervene-bg: rgba(245, 63, 63, 0.1);
+
+// 背景色
+$color-bg-page: #f5f7fa;
+$color-bg-card: #ffffff;
+$color-bg-hover: #f2f3f5;
+
+// 文本色
+$color-text-primary: #1d2129;
+$color-text-secondary: #4e5969;
+$color-text-tertiary: #86909c;
+$color-text-disabled: #c9cdd4;
+$color-text-white: #ffffff;
+
+// 边框色
+$color-border: #e5e6eb;
+$color-divider: #f2f3f5;

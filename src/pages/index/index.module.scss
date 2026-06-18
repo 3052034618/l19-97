@@ -1,0 +1,97 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  padding: 0 $page-padding calc($spacing-xl + 120rpx);
+}
+
+.header {
+  padding: $spacing-xl 0 $spacing-lg;
+}
+
+.greeting {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  line-height: 1.3;
+}
+
+.dateText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+}
+
+.statsRow {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+  margin-bottom: $spacing-lg;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: $spacing-lg 0 $spacing-md;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.sectionSubtitle {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.hotTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-xs;
+  background: rgba(245, 63, 63, 0.1);
+  color: $color-error;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  margin-left: $spacing-sm;
+}
+
+.emptyState {
+  padding: $spacing-xl 0;
+  text-align: center;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+}
+
+.tipBanner {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  color: $color-text-white;
+  margin-bottom: $spacing-lg;
+  position: relative;
+  overflow: hidden;
+}
+
+.tipTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  margin-bottom: 8rpx;
+}
+
+.tipDesc {
+  font-size: $font-size-sm;
+  opacity: 0.9;
+  line-height: $line-height-normal;
+}
+
+.tipIcon {
+  position: absolute;
+  right: -20rpx;
+  bottom: -20rpx;
+  font-size: 160rpx;
+  opacity: 0.15;
+}

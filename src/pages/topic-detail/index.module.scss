@@ -1,0 +1,313 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  padding: 0 $page-padding calc($spacing-xl + 140rpx);
+}
+
+.headerCard {
+  margin-top: $spacing-lg;
+  border-radius: $radius-lg;
+  padding: $spacing-xl;
+  color: $color-text-white;
+  margin-bottom: $spacing-lg;
+  position: relative;
+  overflow: hidden;
+}
+
+.headerIcon {
+  position: absolute;
+  right: -10rpx;
+  top: -10rpx;
+  font-size: 180rpx;
+  opacity: 0.15;
+}
+
+.topicName {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  margin-bottom: $spacing-sm;
+  position: relative;
+}
+
+.topicMeta {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-lg;
+  position: relative;
+  font-size: $font-size-sm;
+  opacity: 0.9;
+}
+
+.riskLabel {
+  padding: 4rpx 16rpx;
+  border-radius: $radius-xs;
+  background: rgba(255, 255, 255, 0.25);
+  margin-right: $spacing-md;
+  font-weight: $font-weight-medium;
+}
+
+.statsRow {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.statValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  line-height: 1.2;
+}
+
+.statLabel {
+  font-size: $font-size-xs;
+  opacity: 0.85;
+  margin-top: 4rpx;
+}
+
+.section {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.sectionIcon {
+  font-size: 32rpx;
+  margin-right: $spacing-sm;
+}
+
+.sectionTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  flex: 1;
+}
+
+.sectionCount {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.complaintList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.complaintItem {
+  display: flex;
+  align-items: flex-start;
+  padding: $spacing-md;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+}
+
+.complaintNum {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-error 0%, #ff7875 100%);
+  color: $color-text-white;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.misunderstandingItem {
+  display: flex;
+  align-items: flex-start;
+  padding: $spacing-md;
+  background: rgba(255, 125, 0, 0.06);
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+  margin-bottom: $spacing-sm;
+  border-left: 6rpx solid $color-warning;
+}
+
+.channelTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.channelTag {
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-xs;
+  background: $color-primary-bg;
+  color: $color-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.suggestionItem {
+  display: flex;
+  align-items: flex-start;
+  padding: $spacing-md;
+  background: rgba(0, 180, 42, 0.06);
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+  margin-bottom: $spacing-sm;
+  border-left: 6rpx solid $color-success;
+}
+
+.suggestionCheck {
+  color: $color-success;
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  margin-right: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: $spacing-md $page-padding;
+  background: $color-bg-card;
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.06);
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+}
+
+.createBtn {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+
+  &:active { opacity: 0.9; transform: scale(0.98); }
+}
+
+.emptyTip {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  text-align: center;
+  padding: $spacing-md 0;
+}
+
+.modalMask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+}
+
+.modal {
+  background: $color-bg-card;
+  border-radius: $radius-xl $radius-xl 0 0;
+  width: 100%;
+  padding: $spacing-xl;
+  padding-bottom: calc(#{$spacing-xl} + env(safe-area-inset-bottom));
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-lg;
+}
+
+.modalTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.modalClose {
+  font-size: 40rpx;
+  color: $color-text-tertiary;
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.formLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+}
+
+.formInput {
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  margin-bottom: $spacing-lg;
+  min-height: 48rpx;
+}
+
+.formTextarea {
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  margin-bottom: $spacing-lg;
+  min-height: 160rpx;
+  line-height: $line-height-normal;
+}
+
+.roleOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+}
+
+.roleOption {
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-xs;
+  background: $color-bg-hover;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  border: 2rpx solid transparent;
+  transition: all $transition-base;
+
+  &.active {
+    background: $color-primary-bg;
+    color: $color-primary;
+    border-color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+}
