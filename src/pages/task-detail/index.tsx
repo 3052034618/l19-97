@@ -44,7 +44,7 @@ const LOG_TYPE_CONFIG: Record<string, { icon: string; color: string; bgColor: st
 
 const TaskDetailPage: React.FC = () => {
   const router = useRouter();
-  const { tasks, updateTaskStatus, addTaskLog, setTaskEffectiveness, urgeTask, addCoAssistant, transferTask, handleTransfer } = useApp();
+  const { tasks, updateTaskStatus, addTaskLog, setTaskEffectiveness, urgeTask, addCoAssistant, transferTask, handleTransfer: confirmHandover } = useApp();
   const [showLogModal, setShowLogModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showEffectModal, setShowEffectModal] = useState(false);
@@ -222,9 +222,9 @@ const TaskDetailPage: React.FC = () => {
   const handleConfirmTransfer = useCallback((e?: any) => {
     stopBubble(e);
     if (!latestTransfer) return;
-    handleTransfer(task.id, latestTransfer.id);
+    confirmHandover(task.id, latestTransfer.id);
     Taro.showToast({ title: '已确认接手任务', icon: 'success' });
-  }, [task.id, latestTransfer, handleTransfer]);
+  }, [task.id, latestTransfer, confirmHandover]);
 
   const getLogTypeConfig = (log: TaskLog) => {
     return LOG_TYPE_CONFIG[log.logType || 'normal'] || LOG_TYPE_CONFIG.normal;

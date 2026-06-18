@@ -1,5 +1,12 @@
 import { RiskLevel, Task, Topic, ClosureStep, TaskStatus } from '@/types';
 
+const ASSIGNEE_ROLE_MAP_CN: Record<string, string> = {
+  counselor: '辅导员',
+  logistics: '后勤',
+  academic: '教务',
+  propaganda: '宣传部'
+};
+
 export const getRiskLevelByHeat = (heat: number): RiskLevel => {
   if (heat >= 80) return 'intervene';
   if (heat >= 60) return 'warming';
@@ -247,12 +254,47 @@ export const getFullClosureChain = (topic: Topic, relatedTasks: Task[]): FullClo
   return { steps: chains, percent };
 };
 
-export const getLatestTaskLog = (task: Task) => {
-  if (!task || task.logs.length === 0) return null;
-  const logs = [...task.logs].sort((a, b) =>
-    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-  );
-  return logs[logs.length - 1];
+const LOG_TYPE_LABEL: Record<string, string> = {
+  normal: '处置记录',
+  urge: '催办',
+  transfer: '转办',
+  coassist: '协办',
+  effectiveness: '效果评价'
+};
+
+export interface TaskLatestLog {
+  type: string;
+  typeLabel: string;
+  icon: string;
+  content: string;
+  time: string;
+  operator: string;
+}
+
+export const getLatestTaskLog = (task: Task): TaskLatestLog | null => {
+  if (!task) return null;
+  const logs = Array.isArray(task.logs) ? task.logs : [];
+  if (logs.length === 0) return null;
+  const sorted = [...logs].sort((a, b) => {
+    const ta = new Date((a.timestamp || '').replace(/-/g, '/')).getTime();
+    const tb = new Date((b.timestamp || '').replace(/-/g, '/')).getTime();
+    return ta - tb;
+  });
+  const latest = sorted[sorted.length - 1];
+  if (!latest) return null;
+  const logType = latest.logType || 'normal';
+  const typeLabel = LOG_TYPE_LABEL[logType] || '处置记录';
+  const iconMap: Record<string, string> = {
+    normal: '📝', urge: '⏰', transfer: '🔄', coassist: '🤝', effectiveness: '🏆'
+  };
+  return {
+    type: logType,
+    typeLabel,
+    icon: iconMap[logType] || '📝',
+    content: typeof latest.content === 'string' ? latest.content : '暂无详细描述',
+    time: latest.timestamp || task.createdAt || '',
+    operator: latest.operator || task.assignee || '相关老师'
+  };
 };
 
 export const nowLocaleString = (): string => {
@@ -260,19 +302,25 @@ export const nowLocaleString = (): string => {
 };
 
 export const getNextSuggestion = (status: TaskStatus, task: Task): string => {
+  if (!task) return '请先选择任务';
+  const transferRecords = Array.isArray(task.transferRecords) ? task.transferRecords : [];
   if (status === 'pending') {
-    if (task.transferRecords.length > 0 && !task.transferRecords[task.transferRecords.length - 1].handled) {
+    if (transferRecords.length > 0 && !transferRecords[transferRecords.length - 1].handled) {
       return '等待新负责人确认接手，可催办提醒';
     }
     return '尽快启动处置，点击「更新状态」转至处理中';
   }
   if (status === 'processing') {
-    if (task.logs.length <= 1) {
+    const logs = Array.isArray(task.logs) ? task.logs : [];
+    if (logs.length <= 1) {
       return '建议添加第一条处理记录，同步处置进展';
     }
     const latest = getLatestTaskLog(task);
-    if (latest && new Date().getTime() - new Date(latest.timestamp).getTime() > 24 * 3600 * 1000) {
-      return '已超过24小时未更新，建议追加最新处理动态';
+    if (latest && latest.time) {
+      const diffHours = (new Date().getTime() - new Date(latest.time.replace(/-/g, '/')).getTime()) / (1000 * 3600);
+      if (diffHours > 24) {
+        return '已超过24小时未更新，建议追加最新处理动态';
+      }
     }
     return '持续跟进，有重要进展时及时追加记录';
   }
@@ -292,3 +340,93 @@ export interface EffectivenessDetail {
   transferCount: number;
   processLogCount: number;
 }
+
+export interface CollaborationTrace {
+  type: 'urge' | 'coassist' | 'transfer';
+  typeLabel: string;
+  icon: string;
+  taskId: string;
+  taskTitle: string;
+  time: string;
+  operator?: string;
+  remark?: string;
+  extra?: string;
+}
+
+const safeTime = (ts: any): number => {
+  if (!ts || typeof ts !== 'string') return 0;
+  return new Date(ts.replace(/-/g, '/')).getTime();
+};
+
+export const getTopicCollaborationTraces = (relatedTasks: Task[]): CollaborationTrace[] => {
+  const traces: CollaborationTrace[] = [];
+  if (!Array.isArray(relatedTasks)) return traces;
+  const safeTasks = relatedTasks.filter(Boolean);
+
+  let latestUrge: { task: Task; record: any } | null = null;
+  let latestCoassist: { task: Task; record: any } | null = null;
+  let latestTransfer: { task: Task; record: any } | null = null;
+
+  safeTasks.forEach(task => {
+    const urges = Array.isArray(task.urgeRecords) ? task.urgeRecords : [];
+    urges.forEach(r => {
+      if (!latestUrge || safeTime(r.timestamp) > safeTime(latestUrge.record.timestamp)) {
+        latestUrge = { task, record: r };
+      }
+    });
+
+    const coassists = Array.isArray(task.coAssistants) ? task.coAssistants : [];
+    coassists.forEach(r => {
+      if (!latestCoassist || safeTime(r.addedAt) > safeTime(latestCoassist.record.addedAt)) {
+        latestCoassist = { task, record: r };
+      }
+    });
+
+    const transfers = Array.isArray(task.transferRecords) ? task.transferRecords : [];
+    transfers.forEach(r => {
+      if (!latestTransfer || safeTime(r.timestamp) > safeTime(latestTransfer.record.timestamp)) {
+        latestTransfer = { task, record: r };
+      }
+    });
+  });
+
+  if (latestUrge) {
+    traces.push({
+      type: 'urge',
+      typeLabel: '催办',
+      icon: '⏰',
+      taskId: latestUrge.task.id,
+      taskTitle: latestUrge.task.title,
+      time: latestUrge.record.timestamp || latestUrge.task.createdAt,
+      operator: latestUrge.record.operator,
+      remark: latestUrge.record.remark,
+      extra: latestUrge.record.remark ? `：${latestUrge.record.remark}` : ''
+    });
+  }
+  if (latestCoassist) {
+    traces.push({
+      type: 'coassist',
+      typeLabel: '协办',
+      icon: '🤝',
+      taskId: latestCoassist.task.id,
+      taskTitle: latestCoassist.task.title,
+      time: latestCoassist.record.addedAt || latestCoassist.task.createdAt,
+      operator: latestCoassist.record.addedBy,
+      extra: `${latestCoassist.record.name}（${ASSIGNEE_ROLE_MAP_CN[latestCoassist.record.role] || latestCoassist.record.role}）`
+    });
+  }
+  if (latestTransfer) {
+    traces.push({
+      type: 'transfer',
+      typeLabel: '转办',
+      icon: '🔄',
+      taskId: latestTransfer.task.id,
+      taskTitle: latestTransfer.task.title,
+      time: latestTransfer.record.timestamp || latestTransfer.task.createdAt,
+      remark: latestTransfer.record.remark,
+      extra: `${latestTransfer.record.fromName} → ${latestTransfer.record.toName}${latestTransfer.record.handled ? '（已接手）' : '（待接手）'}`
+    });
+  }
+
+  return traces.sort((a, b) => safeTime(b.time) - safeTime(a.time));
+};

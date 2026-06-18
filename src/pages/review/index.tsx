@@ -4,7 +4,7 @@ import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import { useApp } from '@/store';
 import { RISK_LEVEL_MAP, TASK_STATUS_MAP, ASSIGNEE_ROLE_MAP, Topic, Task, ReviewFilterTab } from '@/types';
-import { getClosureProgress, getLatestTaskLog, getDueStatus, getFullClosureChain, getNextSuggestion } from '@/utils';
+import { getClosureProgress, getLatestTaskLog, getDueStatus, getFullClosureChain, getNextSuggestion, TaskLatestLog, getTopicCollaborationTraces, CollaborationTrace } from '@/utils';
 import RiskLevelBadge from '@/components/RiskLevelBadge';
 import styles from './index.module.scss';
 
@@ -87,10 +87,16 @@ const ReviewPage: React.FC = () => {
     Taro.navigateTo({ url: `/pages/task-detail/index?id=${id}` });
   };
 
-  const getLatestLog = (taskId: string) => {
+  const getLatestLog = (taskId: string): TaskLatestLog | null => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return null;
     return getLatestTaskLog(task);
+  };
+
+  const safeLen = (arr: any[] | undefined): number => Array.isArray(arr) ? arr.length : 0;
+  const safeSlice = (str: string | undefined, start: number, end?: number): string => {
+    if (typeof str !== 'string') return '';
+    return end === undefined ? str.slice(start) : str.slice(start, end);
   };
 
   const openArchive = (e: any, topicId: string) => {
@@ -110,6 +116,7 @@ const ReviewPage: React.FC = () => {
   const archiveTopic = archiveTopicId ? topics.find(t => t.id === archiveTopicId) : null;
   const archiveTasks = archiveTopic ? tasks.filter(t => t.topicId === archiveTopic.id) : [];
   const fullChain = archiveTopic ? getFullClosureChain(archiveTopic, archiveTasks) : null;
+  const collabTraces = archiveTopic ? getTopicCollaborationTraces(archiveTasks) : [];
 
   const effectTask = effectDetailTaskId ? tasks.find(t => t.id === effectDetailTaskId) : null;
   const effectLog = effectTask ? effectTask.logs.find(l => l.logType === 'effectiveness') : null;
@@ -210,14 +217,16 @@ const ReviewPage: React.FC = () => {
             const relatedTasks = tasks.filter(t => t.topicId === topic.id);
             const unclosedTask = relatedTasks.find(t => t.status !== 'completed');
             const latestLog = unclosedTask ? getLatestLog(unclosedTask.id) : null;
-            const closureProgress = getClosureProgress(topic, relatedTasks);
+            const closure = getFullClosureChain(topic, relatedTasks);
+            const missingSteps = closure.steps.filter(s => !s.done).map(s => s.label);
+            const completedStepLabels = closure.steps.filter(s => s.done).map(s => s.label);
 
-            const hasUrge = relatedTasks.some(t => t.urgeRecords.length > 0);
-            const hasCoassist = relatedTasks.some(t => t.coAssistants.length > 0);
-            const hasTransfer = relatedTasks.some(t => t.transferRecords.length > 0);
-            const urgeCount = relatedTasks.reduce((s, t) => s + t.urgeRecords.length, 0);
-            const coassistCount = relatedTasks.reduce((s, t) => s + t.coAssistants.length, 0);
-            const transferCount = relatedTasks.reduce((s, t) => s + t.transferRecords.length, 0);
+            const hasUrge = relatedTasks.some(t => safeLen(t.urgeRecords) > 0);
+            const hasCoassist = relatedTasks.some(t => safeLen(t.coAssistants) > 0);
+            const hasTransfer = relatedTasks.some(t => safeLen(t.transferRecords) > 0);
+            const urgeCount = relatedTasks.reduce((s, t) => s + safeLen(t.urgeRecords), 0);
+            const coassistCount = relatedTasks.reduce((s, t) => s + safeLen(t.coAssistants), 0);
+            const transferCount = relatedTasks.reduce((s, t) => s + safeLen(t.transferRecords), 0);
 
             return (
               <View
@@ -243,9 +252,9 @@ const ReviewPage: React.FC = () => {
                   {hasTransfer && <View className={classnames(styles.metaChip, styles.chipTransfer)}>🔄 转办 {transferCount}</View>}
                 </View>
 
-                {topic.mainComplaints[0] && (
+                {(topic.mainComplaints || [])[0] && (
                   <Text className={styles.complaintsPreview}>
-                    主要不满：{topic.mainComplaints[0]}
+                    主要不满：{(topic.mainComplaints || [])[0]}
                   </Text>
                 )}
 
@@ -253,11 +262,11 @@ const ReviewPage: React.FC = () => {
                 <View className={styles.closureSection}>
                   <View className={styles.closureHeader}>
                     <Text className={styles.closureTitle}>
-                      🎯 闭环进度 {closureProgress.percent}%
+                      🎯 闭环进度 {closure.percent}%
                     </Text>
                     <Text className={styles.closureMissing}>
-                      {closureProgress.missing.length > 0
-                        ? `还差 ${closureProgress.missing.length} 步`
+                      {missingSteps.length > 0
+                        ? `还差 ${missingSteps.length} 步`
                         : '✅ 已全部闭环'}
                     </Text>
                   </View>
@@ -265,16 +274,16 @@ const ReviewPage: React.FC = () => {
                     <View
                       className={styles.progressFill}
                       style={{
-                        width: `${closureProgress.percent}%`,
-                        background: closureProgress.percent === 100
+                        width: `${closure.percent}%`,
+                        background: closure.percent === 100
                           ? 'linear-gradient(90deg, #00B42A, #23C343)'
                           : 'linear-gradient(90deg, #165DFF, #4080FF)'
                       }}
                     />
                   </View>
-                  {closureProgress.missing.length > 0 && (
+                  {missingSteps.length > 0 && (
                     <View className={styles.closureSteps}>
-                      {closureProgress.missing.map((step, idx) => (
+                      {missingSteps.map((step, idx) => (
                         <View key={idx} className={styles.missingStep}>
                           <Text className={styles.missingDot}>○</Text>
                           <Text className={styles.missingText}>{step}</Text>
@@ -282,9 +291,9 @@ const ReviewPage: React.FC = () => {
                       ))}
                     </View>
                   )}
-                  {closureProgress.steps.length > 0 && (
+                  {completedStepLabels.length > 0 && (
                     <View className={styles.closureSteps}>
-                      {closureProgress.steps.map((step, idx) => (
+                      {completedStepLabels.map((step, idx) => (
                         <View key={idx} className={styles.completedStep}>
                           <Text className={styles.completedDot}>✓</Text>
                           <Text className={styles.completedText}>{step}</Text>
@@ -329,7 +338,7 @@ const ReviewPage: React.FC = () => {
                         </View>
                         <View className={styles.taskAssignee}>
                           👤 {unclosedTask.assignee}（{ASSIGNEE_ROLE_MAP[unclosedTask.assigneeRole]}）
-                          <Text style={{ marginLeft: '12rpx' }}>· 截止 {unclosedTask.dueDate.slice(5)}</Text>
+                          <Text style={{ marginLeft: '12rpx' }}>· 截止 {safeSlice(unclosedTask.dueDate, 5)}</Text>
                           {getDueStatus(unclosedTask).urgent && (
                             <Text style={{ marginLeft: '12rpx', color: '#F53F3F' }}>
                               ⚠️ {getDueStatus(unclosedTask).label}
@@ -338,7 +347,7 @@ const ReviewPage: React.FC = () => {
                         </View>
                         {latestLog && (
                           <Text className={styles.latestLog}>
-                            <Text className={styles.logTime}>{latestLog.timestamp.slice(5, 16)}</Text>
+                            <Text className={styles.logTime}>{safeSlice(latestLog.time, 5, 16)}</Text>
                             <Text>{latestLog.operator}：{latestLog.content}</Text>
                           </Text>
                         )}
@@ -352,7 +361,8 @@ const ReviewPage: React.FC = () => {
                         }}
                       >
                         <Text className={styles.taskPreviewTitle} style={{ color: '#00B42A' }}>
-                          ✅ 相关任务均已闭环
+                          ✅ 相关任务均已完成
+                          {closure.percent < 100 ? '，建议补充效果评价' : '，已完成闭环'}
                         </Text>
                         {relatedTasks[0]?.effectiveness !== undefined && (
                           <View
@@ -458,16 +468,20 @@ const ReviewPage: React.FC = () => {
                   </View>
                 )}
 
-                {getLatestLog(task.id) && (
-                  <Text className={styles.latestLog}>
-                    <Text className={styles.logTime}>
-                      {getLatestLog(task.id)!.timestamp.slice(5, 16)}
+                {(() => {
+                  const log = getLatestLog(task.id);
+                  if (!log) return null;
+                  return (
+                    <Text className={styles.latestLog}>
+                      <Text className={styles.logTime}>
+                        {safeSlice(log.time, 5, 16)}
+                      </Text>
+                      <Text>
+                        {log.operator}：{log.content}
+                      </Text>
                     </Text>
-                    <Text>
-                      {getLatestLog(task.id)!.operator}：{getLatestLog(task.id)!.content}
-                    </Text>
-                  </Text>
-                )}
+                  );
+                })()}
 
                 <View className={styles.suggestionRow}>
                   <Text className={styles.suggestionIcon}>💡</Text>
@@ -612,7 +626,7 @@ const ReviewPage: React.FC = () => {
                         {step.label}
                       </Text>
                       {step.time && step.done && (
-                        <Text className={styles.chainTime}>{step.time.slice(5, 16)}</Text>
+                        <Text className={styles.chainTime}>{safeSlice(step.time, 5, 16)}</Text>
                       )}
                       {!step.done && (
                         <Text className={styles.chainPending}>待完成</Text>
@@ -669,6 +683,63 @@ const ReviewPage: React.FC = () => {
                 </View>
               </View>
             </View>
+
+            {/* 协同过程追踪 */}
+            {collabTraces.length > 0 && (
+              <View className={styles.archiveTrace}>
+                <Text className={styles.archiveCollabTitle}>
+                  🔍 协同追踪 · 最近动态
+                </Text>
+                {collabTraces.map((trace: CollaborationTrace) => (
+                  <View
+                    key={`${trace.type}-${trace.taskId}`}
+                    className={styles.traceItem}
+                    onClick={e => {
+                      stopBubble(e);
+                      closeArchive();
+                      openTask(trace.taskId);
+                    }}
+                  >
+                    <View
+                      className={styles.traceIcon}
+                      style={{
+                        background: trace.type === 'urge'
+                          ? 'rgba(245,63,63,0.1)'
+                          : trace.type === 'coassist'
+                          ? 'rgba(22,93,255,0.1)'
+                          : 'rgba(255,125,0,0.1)',
+                        color: trace.type === 'urge'
+                          ? '#F53F3F'
+                          : trace.type === 'coassist'
+                          ? '#165DFF'
+                          : '#FF7D00'
+                      }}
+                    >
+                      {trace.icon}
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <View className={styles.traceHeader}>
+                        <Text className={styles.traceType}>{trace.typeLabel}</Text>
+                        <Text className={styles.traceTime}>{safeSlice(trace.time, 5, 16)</Text>
+                      </View>
+                      <Text className={styles.traceTaskName}>📌 {trace.taskTitle}</Text>
+                      <Text className={styles.traceDetail}>
+                        {trace.type === 'urge' && (
+                          <>催办{trace.operator ? `（${trace.operator}）` : ''}{trace.extra || ''}</>
+                        )}
+                        {trace.type === 'coassist' && (
+                          <>邀请协办：{trace.extra || ''}</>
+                        )}
+                        {trace.type === 'transfer' && (
+                          <>任务交接：{trace.extra || ''}</>
+                        )}
+                      </Text>
+                    </View>
+                    <Text className={styles.traceArrow}>›</Text>
+                  </View>
+                ))}
+              </View>
+            )}
 
             <View className={styles.archiveBtns} onClick={stopBubble}>
               <View

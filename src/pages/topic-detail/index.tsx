@@ -141,21 +141,51 @@ const TopicDetailPage: React.FC = () => {
   };
 
   const getGroupBoardInfo = (taskList: Task[]) => {
-    if (taskList.length === 0) return null;
-    const sorted = [...taskList].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    if (!taskList || taskList.length === 0) return null;
+    const safeList = taskList.filter(Boolean);
+    if (safeList.length === 0) return null;
+    const sorted = [...safeList].sort((a, b) => {
+      const ta = new Date((a.createdAt || '').replace(/-/g, '/')).getTime();
+      const tb = new Date((b.createdAt || '').replace(/-/g, '/')).getTime();
+      return tb - ta;
+    });
     const latest = sorted[0];
     const latestLog = getLatestTaskLog(latest);
-    const suggestion = getNextSuggestion(latest.status, latest);
+    const suggestion = getNextSuggestion(latest.status || 'pending', latest);
+    const safeLen = (arr: any[] | undefined) => Array.isArray(arr) ? arr.length : 0;
     return {
       latestTask: latest,
       latestLog,
       suggestion,
-      totalUrges: taskList.reduce((s, t) => s + t.urgeRecords.length, 0),
-      totalCoassists: taskList.reduce((s, t) => s + t.coAssistants.length, 0),
-      totalTransfers: taskList.reduce((s, t) => s + t.transferRecords.length, 0)
+      totalUrges: safeList.reduce((s, t) => s + safeLen(t.urgeRecords), 0),
+      totalCoassists: safeList.reduce((s, t) => s + safeLen(t.coAssistants), 0),
+      totalTransfers: safeList.reduce((s, t) => s + safeLen(t.transferRecords), 0)
     };
+  };
+
+  const safeSlice = (str: string | undefined, start: number, end?: number): string => {
+    if (typeof str !== 'string') return '';
+    return end === undefined ? str.slice(start) : str.slice(start, end);
+  };
+
+  const safeContentPreview = (content: string | undefined, max: number = 24): string => {
+    if (typeof content !== 'string') return '';
+    return content.length > max ? content.slice(0, max) + '...' : content;
+  };
+
+  const safeTaskAssignee = (t: Task | undefined, fallback: string = '相关老师'): string => {
+    if (!t || !t.assignee) return fallback;
+    return t.assignee;
+  };
+
+  const safeTaskLogsCount = (t: Task | undefined): number => {
+    if (!t) return 0;
+    return Array.isArray(t.logs) ? t.logs.length : 0;
+  };
+
+  const safeTaskRecords = (t: Task | undefined, key: 'urgeRecords' | 'coAssistants' | 'transferRecords'): any[] => {
+    if (!t) return [];
+    return Array.isArray(t[key]) ? t[key] : [];
   };
 
   return (
@@ -208,11 +238,11 @@ const TopicDetailPage: React.FC = () => {
                       <Text className={styles.kanbanMetaLabel}>📝 最近动态</Text>
                       <Text className={styles.kanbanMetaValue}>
                         {board.latestLog
-                          ? `【${board.latestLog.typeLabel}】${board.latestLog.content.slice(0, 24)}${board.latestLog.content.length > 24 ? '...' : ''}`
-                          : `${board.latestTask.assignee} 等待接手启动`}
+                          ? `【${board.latestLog.typeLabel || '处置记录'}】${safeContentPreview(board.latestLog.content)}`
+                          : `${safeTaskAssignee(board.latestTask)} 等待接手启动`}
                       </Text>
-                      {board.latestLog && (
-                        <Text className={styles.kanbanMetaTime}>{board.latestLog.time.slice(5, 16)}</Text>
+                      {board.latestLog && board.latestLog.time && (
+                        <Text className={styles.kanbanMetaTime}>{safeSlice(board.latestLog.time, 5, 16)}</Text>
                       )}
                     </View>
                     <View className={styles.kanbanMeta}>
@@ -232,7 +262,8 @@ const TopicDetailPage: React.FC = () => {
                 {groupedTasks.pending.map(t => {
                   const role = ROLE_OPTIONS.find(r => r.key === t.assigneeRole);
                   const dueStatus = getDueStatus(t);
-                  const hasPendingTransfer = t.transferRecords.length > 0 && !t.transferRecords[t.transferRecords.length - 1].handled;
+                  const transfers = safeTaskRecords(t, 'transferRecords');
+                  const hasPendingTransfer = transfers.length > 0 && !transfers[transfers.length - 1].handled;
                   return (
                     <View
                       key={t.id}
@@ -259,7 +290,7 @@ const TopicDetailPage: React.FC = () => {
                           )}
                         </View>
                         <Text style={{ fontSize: '22rpx', color: '#86909c', marginTop: '4rpx', display: 'block' }}>
-                          {t.assignee} · 截止 {t.dueDate.slice(5)} · {t.logs.length}条日志
+                          {safeTaskAssignee(t)} · 截止 {safeSlice(t.dueDate, 5)} · {safeTaskLogsCount(t)}条日志
                           {dueStatus.urgent && (
                             <Text style={{ color: '#F53F3F', marginLeft: '8rpx' }}>⚠️ {dueStatus.label}</Text>
                           )}
@@ -290,11 +321,11 @@ const TopicDetailPage: React.FC = () => {
                       <Text className={styles.kanbanMetaLabel}>📝 最近动态</Text>
                       <Text className={styles.kanbanMetaValue}>
                         {board.latestLog
-                          ? `【${board.latestLog.typeLabel}】${board.latestLog.content.slice(0, 24)}${board.latestLog.content.length > 24 ? '...' : ''}`
-                          : `${board.latestTask.assignee} 正在处置中`}
+                          ? `【${board.latestLog.typeLabel || '处置记录'}】${safeContentPreview(board.latestLog.content)}`
+                          : `${safeTaskAssignee(board.latestTask)} 正在处置中`}
                       </Text>
-                      {board.latestLog && (
-                        <Text className={styles.kanbanMetaTime}>{board.latestLog.time.slice(5, 16)}</Text>
+                      {board.latestLog && board.latestLog.time && (
+                        <Text className={styles.kanbanMetaTime}>{safeSlice(board.latestLog.time, 5, 16)}</Text>
                       )}
                     </View>
                     <View className={styles.kanbanMeta}>
@@ -332,7 +363,7 @@ const TopicDetailPage: React.FC = () => {
                           </View>
                         </View>
                         <Text style={{ fontSize: '22rpx', color: '#86909c', marginTop: '4rpx', display: 'block' }}>
-                          {t.assignee} · 截止 {t.dueDate.slice(5)} · {t.logs.length}条日志
+                          {safeTaskAssignee(t)} · 截止 {safeSlice(t.dueDate, 5)} · {safeTaskLogsCount(t)}条日志
                           {dueStatus.urgent && (
                             <Text style={{ color: '#F53F3F', marginLeft: '8rpx' }}>⚠️ {dueStatus.label}</Text>
                           )}
@@ -349,19 +380,19 @@ const TopicDetailPage: React.FC = () => {
           {/* 已完成 */}
           {groupedTasks.completed.length > 0 && (() => {
             const board = getGroupBoardInfo(groupedTasks.completed);
-            const avgEffect = Math.round(
-              groupedTasks.completed
-                .filter(t => t.effectiveness !== undefined)
-                .reduce((s, t) => s + (t.effectiveness ?? 0), 0) /
-              Math.max(1, groupedTasks.completed.filter(t => t.effectiveness !== undefined).length)
-            );
+            const evaluatedList = groupedTasks.completed.filter(t => t.effectiveness !== undefined);
+            const avgEffect = evaluatedList.length > 0
+              ? Math.round(
+                  evaluatedList.reduce((s, t) => s + (t.effectiveness ?? 0), 0) / evaluatedList.length
+                )
+              : 0;
             return (
               <View className={styles.taskGroup}>
                 <View className={styles.taskGroupHeader}>
                   <View className={styles.taskGroupDot} style={{ background: '#00B42A' }} />
                   <Text className={styles.taskGroupTitle}>已完成</Text>
                   <Text className={styles.taskGroupCount}>{groupedTasks.completed.length}个</Text>
-                  {board && avgEffect > 0 && (
+                  {avgEffect > 0 && (
                     <View className={styles.kanbanAvgEffect}>平均效果 {avgEffect}%</View>
                   )}
                 </View>
@@ -372,11 +403,11 @@ const TopicDetailPage: React.FC = () => {
                       <Text className={styles.kanbanMetaLabel}>📝 最近动态</Text>
                       <Text className={styles.kanbanMetaValue}>
                         {board.latestLog
-                          ? `【${board.latestLog.typeLabel}】${board.latestLog.content.slice(0, 24)}${board.latestLog.content.length > 24 ? '...' : ''}`
-                          : `${board.latestTask.assignee} 完成处置`}
+                          ? `【${board.latestLog.typeLabel || '处置记录'}】${safeContentPreview(board.latestLog.content)}`
+                          : `${safeTaskAssignee(board.latestTask)} 完成处置`}
                       </Text>
-                      {board.latestLog && (
-                        <Text className={styles.kanbanMetaTime}>{board.latestLog.time.slice(5, 16)}</Text>
+                      {board.latestLog && board.latestLog.time && (
+                        <Text className={styles.kanbanMetaTime}>{safeSlice(board.latestLog.time, 5, 16)}</Text>
                       )}
                     </View>
                     <View className={styles.kanbanMeta}>
@@ -414,7 +445,7 @@ const TopicDetailPage: React.FC = () => {
                           )}
                         </View>
                         <Text style={{ fontSize: '22rpx', color: '#86909c', marginTop: '4rpx', display: 'block' }}>
-                          {t.assignee} · {t.logs.length}条日志
+                          {safeTaskAssignee(t)} · {safeTaskLogsCount(t)}条日志
                         </Text>
                       </View>
                       <Text style={{ fontSize: '36rpx', color: '#86909c' }}>›</Text>
