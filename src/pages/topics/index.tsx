@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import classnames from 'classnames';
@@ -7,6 +7,19 @@ import RiskLevelBadge from '@/components/RiskLevelBadge';
 import styles from './index.module.scss';
 
 const ICON_OPTIONS = ['🏢', '🏠', '🎓', '🎉', '📚', '🍽️', '⚽', '🎨', '🔬', '🏷️'];
+
+const stopBubble = (e: any) => {
+  try {
+    if (e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
+  } catch (err) {
+    // ignore
+  }
+};
 
 const TopicsPage: React.FC = () => {
   const { topics, categories, toggleSubscribe, addCustomTopic } = useApp();
@@ -28,7 +41,18 @@ const TopicsPage: React.FC = () => {
     toggleSubscribe(topicId);
   };
 
-  const handleAddTopic = () => {
+  const openModal = useCallback(() => {
+    setNewTopicName('');
+    setSelectedIcon('🏷️');
+    setShowAddModal(true);
+  }, []);
+
+  const closeModal = useCallback(() => {
+    setShowAddModal(false);
+  }, []);
+
+  const handleAddTopic = useCallback((e?: any) => {
+    stopBubble(e);
     if (!newTopicName.trim()) {
       Taro.showToast({ title: '请输入话题名称', icon: 'none' });
       return;
@@ -37,9 +61,9 @@ const TopicsPage: React.FC = () => {
     setNewTopicName('');
     setSelectedIcon('🏷️');
     setShowAddModal(false);
-    Taro.showToast({ title: '添加成功', icon: 'success' });
-    console.log('[TopicsPage] 添加自定义话题:', newTopicName);
-  };
+    Taro.showToast({ title: '添加成功，已保存', icon: 'success' });
+    console.log('[TopicsPage] 添加自定义话题（持久化）:', newTopicName);
+  }, [newTopicName, selectedIcon, addCustomTopic]);
 
   return (
     <View className={styles.container}>
@@ -50,7 +74,7 @@ const TopicsPage: React.FC = () => {
         </Text>
       </View>
 
-      <View className={styles.addSection} onClick={() => setShowAddModal(true)}>
+      <View className={styles.addSection} onClick={openModal}>
         <View className={styles.addLeft}>
           <Text className={styles.addTitle}>➕ 添加自定义话题</Text>
           <Text className={styles.addDesc}>学院名称、楼栋号、活动名称等均可</Text>
@@ -115,36 +139,52 @@ const TopicsPage: React.FC = () => {
       })}
 
       {showAddModal && (
-        <View className={styles.modalMask} onClick={() => setShowAddModal(false)}>
-          <View className={styles.modal} onClick={e => e.stopPropagation && null}>
+        <View className={styles.modalMask} onClick={closeModal}>
+          <View className={styles.modal} onClick={stopBubble}>
             <Text className={styles.modalTitle}>添加自定义话题</Text>
             <Text className={styles.modalDesc}>输入关键词，系统将自动追踪相关讨论</Text>
 
-            <View className={styles.inputWrap}>
+            <View className={styles.inputWrap} onClick={stopBubble}>
               <Input
                 className={styles.input}
                 placeholder="如：5号宿舍楼、迎新晚会、文学院..."
                 value={newTopicName}
                 onInput={e => setNewTopicName(e.detail.value)}
+                onFocus={stopBubble}
+                onTap={stopBubble}
                 maxlength={20}
               />
             </View>
 
-            <Text style={{ fontSize: '24rpx', color: '#4e5969', marginBottom: '16rpx' }}>选择图标</Text>
-            <View className={styles.iconPicker}>
+            <Text
+              style={{ fontSize: '24rpx', color: '#4e5969', marginBottom: '16rpx' }}
+              onClick={stopBubble}
+            >
+              选择图标
+            </Text>
+            <View className={styles.iconPicker} onClick={stopBubble}>
               {ICON_OPTIONS.map(icon => (
                 <View
                   key={icon}
                   className={classnames(styles.iconOption, selectedIcon === icon && styles.selected)}
-                  onClick={() => setSelectedIcon(icon)}
+                  onClick={e => {
+                    stopBubble(e);
+                    setSelectedIcon(icon);
+                  }}
                 >
                   <Text>{icon}</Text>
                 </View>
               ))}
             </View>
 
-            <View className={styles.modalBtns}>
-              <View className={styles.cancelBtn} onClick={() => setShowAddModal(false)}>
+            <View className={styles.modalBtns} onClick={stopBubble}>
+              <View
+                className={styles.cancelBtn}
+                onClick={e => {
+                  stopBubble(e);
+                  closeModal();
+                }}
+              >
                 取消
               </View>
               <View className={styles.confirmBtn} onClick={handleAddTopic}>

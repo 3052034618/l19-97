@@ -4,7 +4,8 @@ export default defineAppConfig({
     'pages/topics/index',
     'pages/tasks/index',
     'pages/topic-detail/index',
-    'pages/task-detail/index'
+    'pages/task-detail/index',
+    'pages/review/index'
   ],
   window: {
     backgroundTextStyle: 'light',

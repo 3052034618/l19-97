@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, Input, Textarea } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import classnames from 'classnames';
 import { useApp } from '@/store';
 import { RISK_LEVEL_MAP, AssigneeRole } from '@/types';
 import styles from './index.module.scss';
+
+const stopBubble = (e: any) => {
+  try {
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+  } catch (err) {}
+};
 
 const HEADER_BG: Record<string, string> = {
   calm: 'linear-gradient(135deg, #00B42A 0%, #23C343 100%)',
@@ -13,24 +20,41 @@ const HEADER_BG: Record<string, string> = {
   intervene: 'linear-gradient(135deg, #F53F3F 0%, #FF7875 100%)'
 };
 
-const ROLE_OPTIONS: { key: AssigneeRole; label: string }[] = [
-  { key: 'counselor', label: '辅导员' },
-  { key: 'logistics', label: '后勤部门' },
-  { key: 'academic', label: '教务部门' },
-  { key: 'propaganda', label: '宣传部' }
+const ROLE_OPTIONS: { key: AssigneeRole; label: string; icon: string }[] = [
+  { key: 'counselor', label: '辅导员', icon: '👩‍🏫' },
+  { key: 'logistics', label: '后勤部门', icon: '🔧' },
+  { key: 'academic', label: '教务部门', icon: '📋' },
+  { key: 'propaganda', label: '宣传部', icon: '📢' }
 ];
+
+const DUE_OPTIONS: { days: number; label: string }[] = [
+  { days: 1, label: '明天前' },
+  { days: 3, label: '3天内' },
+  { days: 5, label: '5天内' },
+  { days: 7, label: '本周内' }
+];
+
+const calcDueDate = (days: number): string => {
+  const d = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+  return d.toISOString().slice(0, 10);
+};
 
 const TopicDetailPage: React.FC = () => {
   const router = useRouter();
-  const { topics, createTask } = useApp();
+  const { topics, createTask, tasks } = useApp();
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDesc, setTaskDesc] = useState('');
   const [selectedRole, setSelectedRole] = useState<AssigneeRole>('logistics');
   const [assigneeName, setAssigneeName] = useState('');
+  const [dueDays, setDueDays] = useState(3);
 
   const topicId = router.params.id || '';
   const topic = topics.find(t => t.id === topicId);
+
+  const relatedTasks = useMemo(() => {
+    return tasks.filter(t => t.topicId === topicId);
+  }, [tasks, topicId]);
 
   if (!topic) {
     return (
@@ -45,7 +69,27 @@ const TopicDetailPage: React.FC = () => {
   const riskInfo = RISK_LEVEL_MAP[topic.riskLevel];
   const headerBg = HEADER_BG[topic.riskLevel];
 
-  const handleCreateTask = () => {
+  const openTaskModal = useCallback(() => {
+    const suggestedTitle = topic.suggestedResponses.length > 0
+      ? topic.suggestedResponses[0].slice(0, 25) + '...'
+      : `处置「${topic.name}」相关舆情`;
+    const suggestedDesc = topic.mainComplaints.length > 0
+      ? `学生主要反映：\n${topic.mainComplaints.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\n建议参考回应方式处理。`
+      : '';
+    setTaskTitle(suggestedTitle);
+    setTaskDesc(suggestedDesc);
+    setSelectedRole('logistics');
+    setAssigneeName('');
+    setDueDays(3);
+    setShowTaskModal(true);
+  }, [topic]);
+
+  const closeTaskModal = useCallback(() => {
+    setShowTaskModal(false);
+  }, []);
+
+  const handleCreateTask = useCallback((e?: any) => {
+    stopBubble(e);
     if (!taskTitle.trim()) {
       Taro.showToast({ title: '请输入任务标题', icon: 'none' });
       return;
@@ -55,7 +99,8 @@ const TopicDetailPage: React.FC = () => {
       return;
     }
 
-    createTask({
+    const dueDate = calcDueDate(dueDays);
+    const newTaskId = createTask({
       topicId: topic.id,
       topicName: topic.name,
       title: taskTitle.trim(),
@@ -63,15 +108,27 @@ const TopicDetailPage: React.FC = () => {
       status: 'pending',
       assignee: assigneeName.trim(),
       assigneeRole: selectedRole,
-      dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+      dueDate
     });
 
-    Taro.showToast({ title: '任务已创建', icon: 'success' });
-    setShowTaskModal(false);
-    setTaskTitle('');
-    setTaskDesc('');
-    setAssigneeName('');
-    console.log('[TopicDetail] 创建任务:', taskTitle);
+    closeTaskModal();
+    console.log('[TopicDetail] 创建任务（持久化）:', newTaskId, taskTitle);
+
+    Taro.showModal({
+      title: '✅ 任务已创建并保存',
+      content: `已分配给${ROLE_OPTIONS.find(r => r.key === selectedRole)?.label}${assigneeName}，截止日期${dueDate}。是否立即前往协同跟进查看？`,
+      confirmText: '前往查看',
+      cancelText: '继续浏览',
+      success: (res) => {
+        if (res.confirm) {
+          Taro.switchTab({ url: '/pages/tasks/index' });
+        }
+      }
+    });
+  }, [taskTitle, taskDesc, selectedRole, assigneeName, dueDays, topic, createTask, closeTaskModal]);
+
+  const jumpToTask = (taskId: string) => {
+    Taro.navigateTo({ url: `/pages/task-detail/index?id=${taskId}` });
   };
 
   return (
@@ -98,6 +155,54 @@ const TopicDetailPage: React.FC = () => {
           </View>
         </View>
       </View>
+
+      {relatedTasks.length > 0 && (
+        <View className={styles.section}>
+          <View className={styles.sectionHeader}>
+            <Text className={styles.sectionIcon}>📌</Text>
+            <Text className={styles.sectionTitle}>关联协同任务</Text>
+            <Text className={styles.sectionCount}>{relatedTasks.length}个进行中</Text>
+          </View>
+          {relatedTasks.map(t => {
+            const role = ROLE_OPTIONS.find(r => r.key === t.assigneeRole);
+            return (
+              <View
+                key={t.id}
+                onClick={() => jumpToTask(t.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '20rpx',
+                  background: 'rgba(29, 57, 196, 0.04)',
+                  borderRadius: '16rpx',
+                  marginBottom: '12rpx'
+                }}
+              >
+                <Text style={{ fontSize: '32rpx', marginRight: '16rpx' }}>{role?.icon || '📋'}</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    style={{
+                      fontSize: '26rpx',
+                      fontWeight: '500',
+                      color: '#1d2129',
+                      display: 'block',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {t.title}
+                  </Text>
+                  <Text style={{ fontSize: '22rpx', color: '#86909c', marginTop: '4rpx', display: 'block' }}>
+                    {t.assignee} · 截止 {t.dueDate.slice(5)} · {t.logs.length}条日志
+                  </Text>
+                </View>
+                <Text style={{ fontSize: '36rpx', color: '#86909c' }}>›</Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
 
       {topic.mainComplaints.length > 0 && (
         <View className={styles.section}>
@@ -165,47 +270,77 @@ const TopicDetailPage: React.FC = () => {
       )}
 
       <View className={styles.footer}>
-        <View className={styles.createBtn} onClick={() => setShowTaskModal(true)}>
+        <View className={styles.createBtn} onClick={openTaskModal}>
           发起协同任务
         </View>
       </View>
 
       {showTaskModal && (
-        <View className={styles.modalMask} onClick={() => setShowTaskModal(false)}>
-          <View className={styles.modal} onClick={e => e.stopPropagation && null}>
-            <View className={styles.modalHeader}>
+        <View className={styles.modalMask} onClick={closeTaskModal}>
+          <View className={styles.modal} onClick={stopBubble}>
+            <View className={styles.modalHeader} onClick={stopBubble}>
               <Text className={styles.modalTitle}>创建协同任务</Text>
-              <View className={styles.modalClose} onClick={() => setShowTaskModal(false)}>✕</View>
+              <View
+                className={styles.modalClose}
+                onClick={e => {
+                  stopBubble(e);
+                  closeTaskModal();
+                }}
+              >
+                ✕
+              </View>
             </View>
 
             <Text className={styles.formLabel}>任务标题</Text>
-            <View className={styles.formInput}>
+            <View className={styles.formInput} onClick={stopBubble}>
               <Input
                 placeholder="如：回应学生关切、协调相关部门..."
                 value={taskTitle}
                 onInput={e => setTaskTitle(e.detail.value)}
+                onFocus={stopBubble}
                 maxlength={50}
               />
             </View>
 
             <Text className={styles.formLabel}>任务描述（选填）</Text>
-            <View className={styles.formTextarea}>
+            <View className={styles.formTextarea} onClick={stopBubble}>
               <Textarea
                 placeholder="详细说明任务内容和处理要求..."
                 value={taskDesc}
                 onInput={e => setTaskDesc(e.detail.value)}
-                maxlength={200}
+                onFocus={stopBubble}
+                maxlength={300}
                 style={{ width: '100%', minHeight: '140rpx' }}
               />
             </View>
 
             <Text className={styles.formLabel}>负责部门</Text>
-            <View className={styles.roleOptions}>
+            <View className={styles.roleOptions} onClick={stopBubble}>
               {ROLE_OPTIONS.map(opt => (
                 <View
                   key={opt.key}
                   className={classnames(styles.roleOption, selectedRole === opt.key && styles.active)}
-                  onClick={() => setSelectedRole(opt.key)}
+                  onClick={e => {
+                    stopBubble(e);
+                    setSelectedRole(opt.key);
+                  }}
+                >
+                  <Text style={{ marginRight: '8rpx' }}>{opt.icon}</Text>
+                  <Text>{opt.label}</Text>
+                </View>
+              ))}
+            </View>
+
+            <Text className={styles.formLabel}>截止时间</Text>
+            <View className={styles.roleOptions} onClick={stopBubble}>
+              {DUE_OPTIONS.map(opt => (
+                <View
+                  key={opt.days}
+                  className={classnames(styles.roleOption, dueDays === opt.days && styles.active)}
+                  onClick={e => {
+                    stopBubble(e);
+                    setDueDays(opt.days);
+                  }}
                 >
                   <Text>{opt.label}</Text>
                 </View>
@@ -213,18 +348,25 @@ const TopicDetailPage: React.FC = () => {
             </View>
 
             <Text className={styles.formLabel}>负责人姓名</Text>
-            <View className={styles.formInput}>
+            <View className={styles.formInput} onClick={stopBubble}>
               <Input
                 placeholder="如：张老师、王主任..."
                 value={assigneeName}
                 onInput={e => setAssigneeName(e.detail.value)}
+                onFocus={stopBubble}
                 maxlength={20}
               />
             </View>
 
-            <View style={{ display: 'flex', gap: '16rpx', marginTop: '16rpx' }}>
+            <View
+              style={{ display: 'flex', gap: '16rpx', marginTop: '24rpx' }}
+              onClick={stopBubble}
+            >
               <View
-                onClick={() => setShowTaskModal(false)}
+                onClick={e => {
+                  stopBubble(e);
+                  closeTaskModal();
+                }}
                 style={{
                   flex: 1,
                   height: '80rpx',
@@ -255,7 +397,7 @@ const TopicDetailPage: React.FC = () => {
                   fontWeight: '600'
                 }}
               >
-                确认创建
+                确认创建并保存
               </View>
             </View>
           </View>

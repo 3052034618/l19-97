@@ -95,3 +95,89 @@
   font-size: 160rpx;
   opacity: 0.15;
 }
+
+.reviewEntry {
+  background: linear-gradient(135deg, #0F2491 0%, #1D39C4 50%, #4A63D9 100%);
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-lg;
+  color: $color-text-white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8rpx 24rpx rgba(29, 57, 196, 0.2);
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.99);
+    box-shadow: 0 4rpx 12rpx rgba(29, 57, 196, 0.25);
+  }
+}
+
+.reviewEntryTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-sm;
+}
+
+.reviewEntryTitle {
+  display: flex;
+  align-items: center;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+}
+
+.reviewEntryIcon {
+  margin-right: $spacing-sm;
+  font-size: 36rpx;
+}
+
+.reviewEntryBadge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4rpx 16rpx;
+  border-radius: $radius-round;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.reviewEntryDesc {
+  font-size: $font-size-sm;
+  opacity: 0.9;
+  line-height: $line-height-normal;
+  margin-bottom: $spacing-md;
+}
+
+.reviewEntryStats {
+  display: flex;
+  gap: $spacing-md;
+}
+
+.reviewStat {
+  display: flex;
+  align-items: center;
+  font-size: $font-size-xs;
+  opacity: 0.95;
+}
+
+.reviewStatNum {
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  margin-right: 6rpx;
+}
+
+.reviewEntryArrow {
+  position: absolute;
+  right: $spacing-lg;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 48rpx;
+  opacity: 0.8;
+}
+
+.reviewEntryBgIcon {
+  position: absolute;
+  right: 20rpx;
+  bottom: -30rpx;
+  font-size: 200rpx;
+  opacity: 0.08;
+}

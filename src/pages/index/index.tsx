@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text } from '@tarojs/components';
-import { useDidShow } from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { useApp } from '@/store';
 import EmotionThermometer from '@/components/EmotionThermometer';
 import StatCard from '@/components/StatCard';
@@ -90,6 +90,50 @@ const IndexPage: React.FC = () => {
           bgColor="rgba(0, 180, 42, 0.08)"
           valueColor="#00B42A"
         />
+      </View>
+
+      {/* 今日风险复盘入口 */}
+      <View
+        className={styles.reviewEntry}
+        onClick={() => {
+          Taro.navigateTo({ url: '/pages/review/index' });
+          console.log('[HomePage] 点击进入今日风险复盘');
+        }}
+      >
+        <View className={styles.reviewEntryBgIcon}>📊</View>
+        <View className={styles.reviewEntryTop}>
+          <View className={styles.reviewEntryTitle}>
+            <Text className={styles.reviewEntryIcon}>📋</Text>
+            <Text>今日风险复盘</Text>
+          </View>
+          <View className={styles.reviewEntryBadge}>
+            {pendingTasks + processingTasks > 0 ? `${pendingTasks + processingTasks}项待闭环` : '全部已闭环'}
+          </View>
+        </View>
+        <Text className={styles.reviewEntryDesc}>
+          集中查看高风险话题、对应处置进展及最新日志，快速了解哪些事还没闭环
+        </Text>
+        <View className={styles.reviewEntryStats}>
+          <View className={styles.reviewStat}>
+            <Text className={styles.reviewStatNum} style={{ color: '#FF9A9A' }}>
+              {topics.filter(t => t.riskLevel === 'intervene').length}
+            </Text>
+            <Text>需介入</Text>
+          </View>
+          <View className={styles.reviewStat}>
+            <Text className={styles.reviewStatNum} style={{ color: '#FFD591' }}>
+              {topics.filter(t => t.riskLevel === 'warming').length}
+            </Text>
+            <Text>升温中</Text>
+          </View>
+          <View className={styles.reviewStat}>
+            <Text className={styles.reviewStatNum} style={{ color: '#B7EB8F' }}>
+              {tasks.filter(t => t.status === 'completed' && t.effectiveness !== undefined).length}
+            </Text>
+            <Text>已复盘</Text>
+          </View>
+        </View>
+        <Text className={styles.reviewEntryArrow}>›</Text>
       </View>
 
       <View className={styles.sectionHeader}>

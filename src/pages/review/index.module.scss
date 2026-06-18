@@ -1,0 +1,282 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  padding: 0 $page-padding calc($spacing-xl + 60rpx);
+}
+
+.header {
+  padding: $spacing-xl 0 $spacing-lg;
+}
+
+.pageTitle {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+.pageSubtitle {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+}
+
+.summaryCard {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  border-radius: $radius-lg;
+  padding: $spacing-xl;
+  color: $color-text-white;
+  margin-bottom: $spacing-lg;
+  position: relative;
+  overflow: hidden;
+}
+
+.summaryIcon {
+  position: absolute;
+  right: -20rpx;
+  top: -10rpx;
+  font-size: 180rpx;
+  opacity: 0.15;
+}
+
+.summaryTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  margin-bottom: $spacing-md;
+  position: relative;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-sm;
+  position: relative;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-xs;
+}
+
+.summaryNum {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  line-height: 1.2;
+}
+
+.summaryLabel {
+  font-size: 20rpx;
+  opacity: 0.9;
+  margin-top: 4rpx;
+}
+
+.section {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.sectionIcon {
+  font-size: 32rpx;
+  margin-right: $spacing-sm;
+}
+
+.sectionTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  flex: 1;
+}
+
+.sectionCount {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.topicCard {
+  border-radius: $radius-md;
+  border: 1rpx solid $color-divider;
+  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+  transition: all $transition-base;
+
+  &:last-child { margin-bottom: 0; }
+
+  &:active {
+    transform: scale(0.99);
+  }
+}
+
+.topicHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-sm;
+}
+
+.topicTitleRow {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  margin-right: $spacing-sm;
+}
+
+.topicEmoji {
+  font-size: 32rpx;
+  margin-right: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.topicName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+}
+
+.topicMetaRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.metaChip {
+  padding: 4rpx 14rpx;
+  border-radius: $radius-xs;
+  font-size: 20rpx;
+  background: $color-bg-hover;
+  color: $color-text-secondary;
+}
+
+.complaintsPreview {
+  background: rgba(245, 63, 63, 0.06);
+  border-left: 4rpx solid $color-error;
+  padding: $spacing-sm $spacing-md;
+  border-radius: 0 $radius-xs $radius-xs 0;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+  @include text-ellipsis-multi(2);
+}
+
+.taskPreview {
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1rpx dashed $color-divider;
+}
+
+.taskPreviewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.taskPreviewTitle {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  @include text-ellipsis;
+  flex: 1;
+}
+
+.taskStatusTag {
+  padding: 2rpx 12rpx;
+  border-radius: $radius-xs;
+  font-size: 20rpx;
+  margin-left: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.taskAssignee {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  display: flex;
+  align-items: center;
+}
+
+.latestLog {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  background: $color-bg-hover;
+  padding: $spacing-sm;
+  border-radius: $radius-xs;
+  margin-top: $spacing-sm;
+  line-height: $line-height-normal;
+  @include text-ellipsis-multi(2);
+}
+
+.logTime {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+
+.emptyTip {
+  padding: $spacing-lg 0;
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.closedTasks {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.closedTaskRow {
+  display: flex;
+  align-items: flex-start;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  background: rgba(0, 180, 42, 0.04);
+  border-left: 6rpx solid $color-success;
+}
+
+.closedTaskContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.closedTaskTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  @include text-ellipsis;
+}
+
+.closedTaskMeta {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8rpx;
+}
+
+.effectBadge {
+  padding: 2rpx 12rpx;
+  border-radius: $radius-xs;
+  background: $color-success;
+  color: $color-text-white;
+  font-size: 20rpx;
+  font-weight: $font-weight-semibold;
+}
