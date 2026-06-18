@@ -503,3 +503,249 @@
     font-size: $font-size-sm;
   }
 }
+
+.transferNotice {
+  margin-top: $spacing-md;
+  padding: $spacing-md;
+  background: linear-gradient(135deg, rgba(255, 125, 0, 0.08), rgba(255, 77, 79, 0.06));
+  border: 2rpx dashed rgba(255, 125, 0, 0.35);
+  border-radius: $radius-lg;
+}
+
+.transferNoticeHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.transferNoticeTitle {
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  color: #FF7D00;
+  flex: 1;
+}
+
+.transferPath {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm 0;
+  margin-bottom: $spacing-sm;
+}
+
+.transferFrom,
+.transferTo {
+  flex: 1;
+  min-width: 0;
+}
+
+.transferLabel {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.transferPerson {
+  display: flex;
+  align-items: center;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+}
+
+.transferArrow {
+  padding: 0 $spacing-sm;
+  font-size: $font-size-base;
+  opacity: 0.6;
+}
+
+.transferRemark {
+  margin-top: $spacing-sm;
+  padding: $spacing-sm;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: $radius-sm;
+  display: flex;
+  font-size: $font-size-xs;
+}
+
+.transferRemarkLabel {
+  color: $color-text-tertiary;
+  flex-shrink: 0;
+}
+
+.transferRemarkText {
+  color: $color-text-secondary;
+  flex: 1;
+}
+
+.transferTime {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+}
+
+.transferActionRow {
+  margin-top: $spacing-md;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.confirmHandoverBtn {
+  padding: $spacing-sm $spacing-lg;
+  background: linear-gradient(135deg, #FF7D00 0%, #FF9A2E 100%);
+  color: $color-text-white;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-md;
+  box-shadow: 0 4rpx 12rpx rgba(255, 125, 0, 0.25);
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+.sectionSmallTitle {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $color-text-secondary;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+.transferHistorySection {
+  margin-top: $spacing-md;
+  padding: $spacing-md;
+  background: rgba(255, 125, 0, 0.04);
+  border-radius: $radius-md;
+}
+
+.transferHistoryItem {
+  display: flex;
+  align-items: flex-start;
+  padding: $spacing-sm 0;
+  border-bottom: 1rpx dashed rgba(0, 0, 0, 0.06);
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  &:first-child {
+    padding-top: 0;
+  }
+}
+
+.historyIndex {
+  width: 48rpx;
+  height: 48rpx;
+  background: rgba(255, 125, 0, 0.15);
+  color: #FF7D00;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20rpx;
+  font-weight: $font-weight-bold;
+  margin-right: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.historyFlow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: $font-size-xs;
+}
+
+.handoverStatusTag {
+  padding: 4rpx 10rpx;
+  border-radius: 6rpx;
+  font-size: 20rpx;
+  font-weight: $font-weight-medium;
+  flex-shrink: 0;
+}
+
+.collaborationSummary {
+  margin-top: $spacing-md;
+  padding: $spacing-md $spacing-sm;
+  background: linear-gradient(135deg, rgba(22, 93, 255, 0.04), rgba(114, 46, 209, 0.03));
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.collabItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.collabNum {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  line-height: 1.2;
+  margin-top: 4rpx;
+}
+
+.collabLabel {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
+.collabDivider {
+  width: 1rpx;
+  height: 56rpx;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.actionBtn {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-md $spacing-sm;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  transition: all 0.2s;
+
+  &:active {
+    transform: scale(0.96);
+    opacity: 0.8;
+  }
+}
+
+.actionIcon {
+  font-size: 40rpx;
+  margin-bottom: 4rpx;
+}
+
+.actionText {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+}
+
+.actionBadge {
+  position: absolute;
+  top: 8rpx;
+  right: 16rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  padding: 0 8rpx;
+  background: #F53F3F;
+  color: #fff;
+  border-radius: 16rpx;
+  font-size: 20rpx;
+  font-weight: $font-weight-bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

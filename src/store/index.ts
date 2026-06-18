@@ -27,6 +27,7 @@ interface AppContextType extends AppState {
   urgeTask: (taskId: string, remark?: string) => void;
   addCoAssistant: (taskId: string, name: string, role: Task['assigneeRole']) => void;
   transferTask: (taskId: string, toName: string, toRole: Task['assigneeRole'], remark?: string) => void;
+  handleTransfer: (taskId: string, transferRecordId: string) => void;
 }
 
 const normalizeTask = (t: Task): Task => {
@@ -34,7 +35,11 @@ const normalizeTask = (t: Task): Task => {
     ...t,
     coAssistants: t.coAssistants ?? [],
     urgeRecords: t.urgeRecords ?? [],
-    transferRecords: t.transferRecords ?? [],
+    transferRecords: (t.transferRecords ?? []).map(tr => ({
+      ...tr,
+      handled: tr.handled ?? true,
+      handledAt: tr.handledAt ?? undefined
+    })),
     logs: t.logs ?? []
   };
 };
@@ -312,6 +317,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const fromRole = t.assigneeRole;
         const toRoleName = { counselor: '辅导员', logistics: '后勤', academic: '教务', propaganda: '宣传部' }[toRole];
         const transferRemark = remark ? `（备注：${remark}）` : '';
+        const newTransferId = `trans_${Date.now()}`;
         return {
           ...normalizeTask(t),
           assignee: toName,
@@ -319,13 +325,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           transferRecords: [
             ...(t.transferRecords || []),
             {
-              id: `trans_${Date.now()}`,
+              id: newTransferId,
               fromName,
               fromRole,
               toName,
               toRole,
               remark,
-              timestamp: now
+              timestamp: now,
+              handled: false
             }
           ],
           logs: [
@@ -334,8 +341,36 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               id: `log_${Date.now()}_trans`,
               operator: '我',
               role: 'propaganda',
-              content: `【转办】任务已转交${toRoleName}${toName}处理${transferRemark}`,
+              content: `【转办】任务已转交${toRoleName}${toName}处理，等待接手${transferRemark}`,
               logType: 'transfer',
+              timestamp: now
+            }
+          ]
+        };
+      })
+    );
+  }, []);
+
+  const handleTransfer = useCallback((taskId: string, transferRecordId: string) => {
+    const now = nowLocaleString();
+    setTasks(prev =>
+      prev.map(t => {
+        if (t.id !== taskId) return t;
+        return {
+          ...normalizeTask(t),
+          transferRecords: (t.transferRecords || []).map(tr =>
+            tr.id === transferRecordId
+              ? { ...tr, handled: true, handledAt: now }
+              : tr
+          ),
+          logs: [
+            ...t.logs,
+            {
+              id: `log_${Date.now()}_handled`,
+              operator: t.assignee,
+              role: t.assigneeRole,
+              content: `【交接确认】${t.assignee}已接手任务，开始处理`,
+              logType: 'normal' as const,
               timestamp: now
             }
           ]
@@ -366,7 +401,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         refreshOverview,
         urgeTask,
         addCoAssistant,
-        transferTask
+        transferTask,
+        handleTransfer
       }}
     >
       {children}

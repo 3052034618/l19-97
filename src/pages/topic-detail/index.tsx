@@ -3,8 +3,8 @@ import { View, Text, Input, Textarea } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import classnames from 'classnames';
 import { useApp } from '@/store';
-import { RISK_LEVEL_MAP, AssigneeRole, TASK_STATUS_MAP } from '@/types';
-import { getDueStatus } from '@/utils';
+import { RISK_LEVEL_MAP, AssigneeRole, TASK_STATUS_MAP, Task } from '@/types';
+import { getDueStatus, getLatestTaskLog, getNextSuggestion } from '@/utils';
 import styles from './index.module.scss';
 
 const stopBubble = (e: any) => {
@@ -125,12 +125,12 @@ const TopicDetailPage: React.FC = () => {
 
     Taro.showModal({
       title: '✅ 任务已创建并保存',
-      content: `已分配给${ROLE_OPTIONS.find(r => r.key === selectedRole)?.label}${assigneeName}，截止日期${dueDate}。是否立即前往协同跟进查看？`,
-      confirmText: '前往查看',
-      cancelText: '继续浏览',
+      content: `已分配给${ROLE_OPTIONS.find(r => r.key === selectedRole)?.label}${assigneeName}，截止日期${dueDate}。是否立即进入该任务继续跟进？`,
+      confirmText: '立即跟进',
+      cancelText: '留在话题页',
       success: (res) => {
         if (res.confirm) {
-          Taro.switchTab({ url: '/pages/tasks/index' });
+          Taro.navigateTo({ url: `/pages/task-detail/index?id=${newTaskId}` });
         }
       }
     });
@@ -138,6 +138,24 @@ const TopicDetailPage: React.FC = () => {
 
   const jumpToTask = (taskId: string) => {
     Taro.navigateTo({ url: `/pages/task-detail/index?id=${taskId}` });
+  };
+
+  const getGroupBoardInfo = (taskList: Task[]) => {
+    if (taskList.length === 0) return null;
+    const sorted = [...taskList].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    const latest = sorted[0];
+    const latestLog = getLatestTaskLog(latest);
+    const suggestion = getNextSuggestion(latest.status, latest);
+    return {
+      latestTask: latest,
+      latestLog,
+      suggestion,
+      totalUrges: taskList.reduce((s, t) => s + t.urgeRecords.length, 0),
+      totalCoassists: taskList.reduce((s, t) => s + t.coAssistants.length, 0),
+      totalTransfers: taskList.reduce((s, t) => s + t.transferRecords.length, 0)
+    };
   };
 
   return (
@@ -174,134 +192,238 @@ const TopicDetailPage: React.FC = () => {
           </View>
 
           {/* 待处理 */}
-          {groupedTasks.pending.length > 0 && (
-            <View className={styles.taskGroup}>
-              <View className={styles.taskGroupHeader}>
-                <View className={styles.taskGroupDot} style={{ background: '#F53F3F' }} />
-                <Text className={styles.taskGroupTitle}>待处理</Text>
-                <Text className={styles.taskGroupCount}>{groupedTasks.pending.length}个</Text>
-              </View>
-              {groupedTasks.pending.map(t => {
-                const role = ROLE_OPTIONS.find(r => r.key === t.assigneeRole);
-                const dueStatus = getDueStatus(t);
-                return (
-                  <View
-                    key={t.id}
-                    className={styles.taskCardItem}
-                    onClick={() => jumpToTask(t.id)}
-                  >
-                    <Text style={{ fontSize: '32rpx', marginRight: '16rpx' }}>{role?.icon || '📋'}</Text>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx' }}>
-                        <Text className={styles.taskCardTitle}>{t.title}</Text>
-                        <View
-                          className={styles.taskStatusMiniTag}
-                          style={{ background: 'rgba(245, 63, 63, 0.15)', color: '#F53F3F' }}
-                        >
-                          待处理
-                        </View>
-                      </View>
-                      <Text style={{ fontSize: '22rpx', color: '#86909c', marginTop: '4rpx', display: 'block' }}>
-                        {t.assignee} · 截止 {t.dueDate.slice(5)} · {t.logs.length}条日志
-                        {dueStatus.urgent && (
-                          <Text style={{ color: '#F53F3F', marginLeft: '8rpx' }}>⚠️ {dueStatus.label}</Text>
-                        )}
-                      </Text>
-                    </View>
-                    <Text style={{ fontSize: '36rpx', color: '#86909c' }}>›</Text>
-                  </View>
-                );
-              })}
-            </View>
-          )}
+          {groupedTasks.pending.length > 0 && (() => {
+            const board = getGroupBoardInfo(groupedTasks.pending);
+            return (
+              <View className={styles.taskGroup}>
+                <View className={styles.taskGroupHeader}>
+                  <View className={styles.taskGroupDot} style={{ background: '#F53F3F' }} />
+                  <Text className={styles.taskGroupTitle}>待处理</Text>
+                  <Text className={styles.taskGroupCount}>{groupedTasks.pending.length}个</Text>
+                </View>
 
-          {/* 处理中 */}
-          {groupedTasks.processing.length > 0 && (
-            <View className={styles.taskGroup}>
-              <View className={styles.taskGroupHeader}>
-                <View className={styles.taskGroupDot} style={{ background: '#FF7D00' }} />
-                <Text className={styles.taskGroupTitle}>处理中</Text>
-                <Text className={styles.taskGroupCount}>{groupedTasks.processing.length}个</Text>
-              </View>
-              {groupedTasks.processing.map(t => {
-                const role = ROLE_OPTIONS.find(r => r.key === t.assigneeRole);
-                const dueStatus = getDueStatus(t);
-                return (
-                  <View
-                    key={t.id}
-                    className={styles.taskCardItem}
-                    onClick={() => jumpToTask(t.id)}
-                  >
-                    <Text style={{ fontSize: '32rpx', marginRight: '16rpx' }}>{role?.icon || '📋'}</Text>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx' }}>
-                        <Text className={styles.taskCardTitle}>{t.title}</Text>
-                        <View
-                          className={styles.taskStatusMiniTag}
-                          style={{ background: 'rgba(255, 125, 0, 0.15)', color: '#FF7D00' }}
-                        >
-                          处理中
-                        </View>
-                      </View>
-                      <Text style={{ fontSize: '22rpx', color: '#86909c', marginTop: '4rpx', display: 'block' }}>
-                        {t.assignee} · 截止 {t.dueDate.slice(5)} · {t.logs.length}条日志
-                        {dueStatus.urgent && (
-                          <Text style={{ color: '#F53F3F', marginLeft: '8rpx' }}>⚠️ {dueStatus.label}</Text>
-                        )}
+                {board && (
+                  <View className={styles.kanbanInfo}>
+                    <View className={styles.kanbanMeta}>
+                      <Text className={styles.kanbanMetaLabel}>📝 最近动态</Text>
+                      <Text className={styles.kanbanMetaValue}>
+                        {board.latestLog
+                          ? `【${board.latestLog.typeLabel}】${board.latestLog.content.slice(0, 24)}${board.latestLog.content.length > 24 ? '...' : ''}`
+                          : `${board.latestTask.assignee} 等待接手启动`}
                       </Text>
+                      {board.latestLog && (
+                        <Text className={styles.kanbanMetaTime}>{board.latestLog.time.slice(5, 16)}</Text>
+                      )}
                     </View>
-                    <Text style={{ fontSize: '36rpx', color: '#86909c' }}>›</Text>
+                    <View className={styles.kanbanMeta}>
+                      <Text className={styles.kanbanMetaLabel}>💡 下一步建议</Text>
+                      <Text className={styles.kanbanMetaValue}>{board.suggestion}</Text>
+                    </View>
+                    {(board.totalUrges > 0 || board.totalCoassists > 0 || board.totalTransfers > 0) && (
+                      <View className={styles.kanbanCollabSummary}>
+                        {board.totalUrges > 0 && <Text className={styles.kanbanCollabItem}>⏰ 催办{board.totalUrges}次</Text>}
+                        {board.totalCoassists > 0 && <Text className={styles.kanbanCollabItem}>🤝 协办{board.totalCoassists}人</Text>}
+                        {board.totalTransfers > 0 && <Text className={styles.kanbanCollabItem}>🔄 转办{board.totalTransfers}次</Text>}
+                      </View>
+                    )}
                   </View>
-                );
-              })}
-            </View>
-          )}
+                )}
 
-          {/* 已完成 */}
-          {groupedTasks.completed.length > 0 && (
-            <View className={styles.taskGroup}>
-              <View className={styles.taskGroupHeader}>
-                <View className={styles.taskGroupDot} style={{ background: '#00B42A' }} />
-                <Text className={styles.taskGroupTitle}>已完成</Text>
-                <Text className={styles.taskGroupCount}>{groupedTasks.completed.length}个</Text>
-              </View>
-              {groupedTasks.completed.map(t => {
-                const role = ROLE_OPTIONS.find(r => r.key === t.assigneeRole);
-                return (
-                  <View
-                    key={t.id}
-                    className={classnames(styles.taskCardItem, styles.taskCardCompleted)}
-                    onClick={() => jumpToTask(t.id)}
-                  >
-                    <Text style={{ fontSize: '32rpx', marginRight: '16rpx' }}>{role?.icon || '📋'}</Text>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx' }}>
-                        <Text className={styles.taskCardTitle}>{t.title}</Text>
-                        <View
-                          className={styles.taskStatusMiniTag}
-                          style={{ background: 'rgba(0, 180, 42, 0.15)', color: '#00B42A' }}
-                        >
-                          已完成
-                        </View>
-                        {t.effectiveness !== undefined && (
+                {groupedTasks.pending.map(t => {
+                  const role = ROLE_OPTIONS.find(r => r.key === t.assigneeRole);
+                  const dueStatus = getDueStatus(t);
+                  const hasPendingTransfer = t.transferRecords.length > 0 && !t.transferRecords[t.transferRecords.length - 1].handled;
+                  return (
+                    <View
+                      key={t.id}
+                      className={styles.taskCardItem}
+                      onClick={() => jumpToTask(t.id)}
+                    >
+                      <Text style={{ fontSize: '32rpx', marginRight: '16rpx' }}>{role?.icon || '📋'}</Text>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx', flexWrap: 'wrap' }}>
+                          <Text className={styles.taskCardTitle}>{t.title}</Text>
                           <View
                             className={styles.taskStatusMiniTag}
-                            style={{ background: '#00B42A', color: '#fff' }}
+                            style={{ background: 'rgba(245, 63, 63, 0.15)', color: '#F53F3F' }}
                           >
-                            效果 {t.effectiveness}%
+                            待处理
                           </View>
-                        )}
+                          {hasPendingTransfer && (
+                            <View
+                              className={styles.taskStatusMiniTag}
+                              style={{ background: 'rgba(255, 125, 0, 0.15)', color: '#FF7D00' }}
+                            >
+                              待接手
+                            </View>
+                          )}
+                        </View>
+                        <Text style={{ fontSize: '22rpx', color: '#86909c', marginTop: '4rpx', display: 'block' }}>
+                          {t.assignee} · 截止 {t.dueDate.slice(5)} · {t.logs.length}条日志
+                          {dueStatus.urgent && (
+                            <Text style={{ color: '#F53F3F', marginLeft: '8rpx' }}>⚠️ {dueStatus.label}</Text>
+                          )}
+                        </Text>
                       </View>
-                      <Text style={{ fontSize: '22rpx', color: '#86909c', marginTop: '4rpx', display: 'block' }}>
-                        {t.assignee} · {t.logs.length}条日志
-                      </Text>
+                      <Text style={{ fontSize: '36rpx', color: '#86909c' }}>›</Text>
                     </View>
-                    <Text style={{ fontSize: '36rpx', color: '#86909c' }}>›</Text>
+                  );
+                })}
+              </View>
+            );
+          })()}
+
+          {/* 处理中 */}
+          {groupedTasks.processing.length > 0 && (() => {
+            const board = getGroupBoardInfo(groupedTasks.processing);
+            return (
+              <View className={styles.taskGroup}>
+                <View className={styles.taskGroupHeader}>
+                  <View className={styles.taskGroupDot} style={{ background: '#FF7D00' }} />
+                  <Text className={styles.taskGroupTitle}>处理中</Text>
+                  <Text className={styles.taskGroupCount}>{groupedTasks.processing.length}个</Text>
+                </View>
+
+                {board && (
+                  <View className={styles.kanbanInfo}>
+                    <View className={styles.kanbanMeta}>
+                      <Text className={styles.kanbanMetaLabel}>📝 最近动态</Text>
+                      <Text className={styles.kanbanMetaValue}>
+                        {board.latestLog
+                          ? `【${board.latestLog.typeLabel}】${board.latestLog.content.slice(0, 24)}${board.latestLog.content.length > 24 ? '...' : ''}`
+                          : `${board.latestTask.assignee} 正在处置中`}
+                      </Text>
+                      {board.latestLog && (
+                        <Text className={styles.kanbanMetaTime}>{board.latestLog.time.slice(5, 16)}</Text>
+                      )}
+                    </View>
+                    <View className={styles.kanbanMeta}>
+                      <Text className={styles.kanbanMetaLabel}>💡 下一步建议</Text>
+                      <Text className={styles.kanbanMetaValue}>{board.suggestion}</Text>
+                    </View>
+                    {(board.totalUrges > 0 || board.totalCoassists > 0 || board.totalTransfers > 0) && (
+                      <View className={styles.kanbanCollabSummary}>
+                        {board.totalUrges > 0 && <Text className={styles.kanbanCollabItem}>⏰ 催办{board.totalUrges}次</Text>}
+                        {board.totalCoassists > 0 && <Text className={styles.kanbanCollabItem}>🤝 协办{board.totalCoassists}人</Text>}
+                        {board.totalTransfers > 0 && <Text className={styles.kanbanCollabItem}>🔄 转办{board.totalTransfers}次</Text>}
+                      </View>
+                    )}
                   </View>
-                );
-              })}
-            </View>
-          )}
+                )}
+
+                {groupedTasks.processing.map(t => {
+                  const role = ROLE_OPTIONS.find(r => r.key === t.assigneeRole);
+                  const dueStatus = getDueStatus(t);
+                  return (
+                    <View
+                      key={t.id}
+                      className={styles.taskCardItem}
+                      onClick={() => jumpToTask(t.id)}
+                    >
+                      <Text style={{ fontSize: '32rpx', marginRight: '16rpx' }}>{role?.icon || '📋'}</Text>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx' }}>
+                          <Text className={styles.taskCardTitle}>{t.title}</Text>
+                          <View
+                            className={styles.taskStatusMiniTag}
+                            style={{ background: 'rgba(255, 125, 0, 0.15)', color: '#FF7D00' }}
+                          >
+                            处理中
+                          </View>
+                        </View>
+                        <Text style={{ fontSize: '22rpx', color: '#86909c', marginTop: '4rpx', display: 'block' }}>
+                          {t.assignee} · 截止 {t.dueDate.slice(5)} · {t.logs.length}条日志
+                          {dueStatus.urgent && (
+                            <Text style={{ color: '#F53F3F', marginLeft: '8rpx' }}>⚠️ {dueStatus.label}</Text>
+                          )}
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: '36rpx', color: '#86909c' }}>›</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })()}
+
+          {/* 已完成 */}
+          {groupedTasks.completed.length > 0 && (() => {
+            const board = getGroupBoardInfo(groupedTasks.completed);
+            const avgEffect = Math.round(
+              groupedTasks.completed
+                .filter(t => t.effectiveness !== undefined)
+                .reduce((s, t) => s + (t.effectiveness ?? 0), 0) /
+              Math.max(1, groupedTasks.completed.filter(t => t.effectiveness !== undefined).length)
+            );
+            return (
+              <View className={styles.taskGroup}>
+                <View className={styles.taskGroupHeader}>
+                  <View className={styles.taskGroupDot} style={{ background: '#00B42A' }} />
+                  <Text className={styles.taskGroupTitle}>已完成</Text>
+                  <Text className={styles.taskGroupCount}>{groupedTasks.completed.length}个</Text>
+                  {board && avgEffect > 0 && (
+                    <View className={styles.kanbanAvgEffect}>平均效果 {avgEffect}%</View>
+                  )}
+                </View>
+
+                {board && (
+                  <View className={styles.kanbanInfo}>
+                    <View className={styles.kanbanMeta}>
+                      <Text className={styles.kanbanMetaLabel}>📝 最近动态</Text>
+                      <Text className={styles.kanbanMetaValue}>
+                        {board.latestLog
+                          ? `【${board.latestLog.typeLabel}】${board.latestLog.content.slice(0, 24)}${board.latestLog.content.length > 24 ? '...' : ''}`
+                          : `${board.latestTask.assignee} 完成处置`}
+                      </Text>
+                      {board.latestLog && (
+                        <Text className={styles.kanbanMetaTime}>{board.latestLog.time.slice(5, 16)}</Text>
+                      )}
+                    </View>
+                    <View className={styles.kanbanMeta}>
+                      <Text className={styles.kanbanMetaLabel}>💡 下一步建议</Text>
+                      <Text className={styles.kanbanMetaValue}>{board.suggestion}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {groupedTasks.completed.map(t => {
+                  const role = ROLE_OPTIONS.find(r => r.key === t.assigneeRole);
+                  return (
+                    <View
+                      key={t.id}
+                      className={classnames(styles.taskCardItem, styles.taskCardCompleted)}
+                      onClick={() => jumpToTask(t.id)}
+                    >
+                      <Text style={{ fontSize: '32rpx', marginRight: '16rpx' }}>{role?.icon || '📋'}</Text>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx', flexWrap: 'wrap' }}>
+                          <Text className={styles.taskCardTitle}>{t.title}</Text>
+                          <View
+                            className={styles.taskStatusMiniTag}
+                            style={{ background: 'rgba(0, 180, 42, 0.15)', color: '#00B42A' }}
+                          >
+                            已完成
+                          </View>
+                          {t.effectiveness !== undefined && (
+                            <View
+                              className={styles.taskStatusMiniTag}
+                              style={{ background: '#00B42A', color: '#fff' }}
+                            >
+                              效果 {t.effectiveness}%
+                            </View>
+                          )}
+                        </View>
+                        <Text style={{ fontSize: '22rpx', color: '#86909c', marginTop: '4rpx', display: 'block' }}>
+                          {t.assignee} · {t.logs.length}条日志
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: '36rpx', color: '#86909c' }}>›</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })()}
         </View>
       )}
 

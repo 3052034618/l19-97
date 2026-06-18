@@ -109,7 +109,27 @@ export interface TransferRecord {
   toRole: AssigneeRole;
   remark?: string;
   timestamp: string;
+  handled: boolean;
+  handledAt?: string;
 }
+
+export interface ClosureStep {
+  key: string;
+  label: string;
+  done: boolean;
+  time?: string;
+  detail?: string;
+  color: string;
+}
+
+export type ReviewFilterTab =
+  | 'all'
+  | 'intervene'
+  | 'warming'
+  | 'unclosed'
+  | 'urged'
+  | 'coassisted'
+  | 'transferred';
 
 export interface Task {
   id: string;

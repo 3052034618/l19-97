@@ -1,4 +1,4 @@
-import { RiskLevel, Task, Topic } from '@/types';
+import { RiskLevel, Task, Topic, ClosureStep, TaskStatus } from '@/types';
 
 export const getRiskLevelByHeat = (heat: number): RiskLevel => {
   if (heat >= 80) return 'intervene';
@@ -115,9 +115,136 @@ export const getClosureProgress = (topic: Topic, relatedTasks: Task[]): { percen
   }
 
   const totalPossible = 6;
-  const percent = Math.round((steps.length / totalPossible) * 100);
+  const percent = Math.min(100, Math.max(0, Math.round((steps.length / totalPossible) * 100)));
 
   return { percent, steps, missing };
+};
+
+export interface FullClosureChain {
+  steps: ClosureStep[];
+  percent: number;
+}
+
+export const getFullClosureChain = (topic: Topic, relatedTasks: Task[]): FullClosureChain => {
+  const chains: ClosureStep[] = [];
+  const allTaskLogs = relatedTasks.flatMap(t => t.logs);
+  const sortedLogs = [...allTaskLogs].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+
+  const findLogByType = (type: string) =>
+    sortedLogs.find(l => l.logType === type) ||
+    sortedLogs.find(l => l.content.includes(type === 'effectiveness' ? '效果评价' : ''));
+
+  const findFirstTaskCreated = () => {
+    const first = [...relatedTasks].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )[0];
+    return first ? first.createdAt : undefined;
+  };
+
+  const findFirstProcessingTime = () => {
+    const processingLogs = sortedLogs.filter(
+      l => l.content.includes('状态变更') || l.content.includes('处置') || l.content.includes('处理')
+    );
+    return processingLogs[0]?.timestamp;
+  };
+
+  const findAllCompletedTime = () => {
+    const completedTimes = relatedTasks
+      .filter(t => t.status === 'completed')
+      .map(t => {
+        const completedLog = t.logs.find(l => l.content.includes('已完成'));
+        return completedLog?.timestamp;
+      })
+      .filter(Boolean) as string[];
+    return completedTimes.length === relatedTasks.filter(t => t.status === 'completed').length
+      && relatedTasks.every(t => t.status === 'completed')
+      ? completedTimes.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
+      : undefined;
+  };
+
+  const allDone = relatedTasks.length > 0 && relatedTasks.every(t => t.status === 'completed');
+  const effectLog = findLogByType('effectiveness');
+
+  chains.push({
+    key: 'subscribe',
+    label: '订阅预警话题',
+    done: topic.isSubscribed,
+    time: topic.updatedAt,
+    detail: topic.isSubscribed ? `已关注「${topic.name}」动态` : '老师尚未订阅该话题',
+    color: '#165DFF'
+  });
+
+  chains.push({
+    key: 'collect',
+    label: '收集学生诉求',
+    done: topic.discussionCount > 0 && topic.mainComplaints.length > 0,
+    time: topic.updatedAt,
+    detail: topic.mainComplaints[0]
+      ? `共${topic.discussionCount}条讨论，核心诉求：${topic.mainComplaints[0]}`
+      : '暂未收集到有效学生反馈',
+    color: '#165DFF'
+  });
+
+  chains.push({
+    key: 'create',
+    label: '创建协同任务',
+    done: relatedTasks.length > 0,
+    time: findFirstTaskCreated(),
+    detail: relatedTasks.length > 0
+      ? `共创建${relatedTasks.length}个任务，最新：${relatedTasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0].title}`
+      : '尚未发起协同任务，建议立即创建',
+    color: '#722ED1'
+  });
+
+  const hasUrge = relatedTasks.some(t => t.urgeRecords.length > 0);
+  const hasCoassist = relatedTasks.some(t => t.coAssistants.length > 0);
+  const hasTransfer = relatedTasks.some(t => t.transferRecords.length > 0);
+  const urgeCount = relatedTasks.reduce((s, t) => s + t.urgeRecords.length, 0);
+  const coassistCount = relatedTasks.reduce((s, t) => s + t.coAssistants.length, 0);
+  const transferCount = relatedTasks.reduce((s, t) => s + t.transferRecords.length, 0);
+
+  chains.push({
+    key: 'collaboration',
+    label: '协同跟进（催办/协办/转办）',
+    done: relatedTasks.length > 0 && (hasUrge || hasCoassist || hasTransfer || relatedTasks.some(t => t.status !== 'pending')),
+    time: (hasTransfer && relatedTasks.find(t => t.transferRecords.length > 0)?.transferRecords[0]?.timestamp)
+      || (hasCoassist && relatedTasks.find(t => t.coAssistants.length > 0)?.coAssistants[0]?.addedAt)
+      || (hasUrge && relatedTasks.find(t => t.urgeRecords.length > 0)?.urgeRecords[0]?.timestamp)
+      || findFirstProcessingTime(),
+    detail: relatedTasks.length === 0
+      ? '等待创建协同任务'
+      : `${urgeCount > 0 ? `催办${urgeCount}次 ` : ''}${coassistCount > 0 ? `协办${coassistCount}人 ` : ''}${transferCount > 0 ? `转办${transferCount}次` : ''}` || '任务创建后等待启动处置',
+    color: '#FF7D00'
+  });
+
+  chains.push({
+    key: 'complete',
+    label: '完成全部任务',
+    done: allDone,
+    time: findAllCompletedTime(),
+    detail: allDone
+      ? `共${relatedTasks.length}个任务均已完成`
+      : `${relatedTasks.filter(t => t.status === 'completed').length}/${relatedTasks.length || 0}个任务完成，剩余${relatedTasks.filter(t => t.status !== 'completed').length}个待处理`,
+    color: '#00B42A'
+  });
+
+  chains.push({
+    key: 'evaluate',
+    label: '效果评价复盘',
+    done: allDone && relatedTasks.some(t => t.effectiveness !== undefined),
+    time: effectLog?.timestamp,
+    detail: effectLog
+      ? effectLog.content
+      : (allDone ? '所有任务已完成，建议补充效果评价' : '任务完成后可补充效果评价复盘'),
+    color: '#00B42A'
+  });
+
+  const doneCount = chains.filter(c => c.done).length;
+  const percent = Math.min(100, Math.max(0, Math.round((doneCount / chains.length) * 100)));
+
+  return { steps: chains, percent };
 };
 
 export const getLatestTaskLog = (task: Task) => {
@@ -131,3 +258,37 @@ export const getLatestTaskLog = (task: Task) => {
 export const nowLocaleString = (): string => {
   return new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
 };
+
+export const getNextSuggestion = (status: TaskStatus, task: Task): string => {
+  if (status === 'pending') {
+    if (task.transferRecords.length > 0 && !task.transferRecords[task.transferRecords.length - 1].handled) {
+      return '等待新负责人确认接手，可催办提醒';
+    }
+    return '尽快启动处置，点击「更新状态」转至处理中';
+  }
+  if (status === 'processing') {
+    if (task.logs.length <= 1) {
+      return '建议添加第一条处理记录，同步处置进展';
+    }
+    const latest = getLatestTaskLog(task);
+    if (latest && new Date().getTime() - new Date(latest.timestamp).getTime() > 24 * 3600 * 1000) {
+      return '已超过24小时未更新，建议追加最新处理动态';
+    }
+    return '持续跟进，有重要进展时及时追加记录';
+  }
+  if (task.effectiveness === undefined) {
+    return '建议补充处置效果评价，沉淀复盘资料';
+  }
+  return '✅ 已闭环，资料已完整保存';
+};
+
+export interface EffectivenessDetail {
+  score: number;
+  note: string;
+  time: string;
+  operator: string;
+  urgeCount: number;
+  coassistCount: number;
+  transferCount: number;
+  processLogCount: number;
+}

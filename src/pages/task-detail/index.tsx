@@ -44,7 +44,7 @@ const LOG_TYPE_CONFIG: Record<string, { icon: string; color: string; bgColor: st
 
 const TaskDetailPage: React.FC = () => {
   const router = useRouter();
-  const { tasks, updateTaskStatus, addTaskLog, setTaskEffectiveness, urgeTask, addCoAssistant, transferTask } = useApp();
+  const { tasks, updateTaskStatus, addTaskLog, setTaskEffectiveness, urgeTask, addCoAssistant, transferTask, handleTransfer } = useApp();
   const [showLogModal, setShowLogModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showEffectModal, setShowEffectModal] = useState(false);
@@ -78,6 +78,13 @@ const TaskDetailPage: React.FC = () => {
   const statusInfo = TASK_STATUS_MAP[task.status];
   const roleText = ASSIGNEE_ROLE_MAP[task.assigneeRole];
   const dueStatus = useMemo(() => getDueStatus(task), [task]);
+
+  const latestTransfer = useMemo(() => {
+    const records = task.transferRecords || [];
+    return records.length > 0 ? records[records.length - 1] : null;
+  }, [task.transferRecords]);
+
+  const hasPendingTransfer = latestTransfer && !latestTransfer.handled;
 
   const openLogModal = useCallback(() => {
     setLogContent('');
@@ -130,7 +137,6 @@ const TaskDetailPage: React.FC = () => {
     closeLogModal();
     setLogContent('');
     Taro.showToast({ title: '日志已记录', icon: 'success' });
-    console.log('[TaskDetail] 添加日志（持久化）:', task.id, logContent);
   }, [task.id, logContent, addTaskLog, closeLogModal]);
 
   const handleUpdateStatus = useCallback((e?: any) => {
@@ -178,7 +184,6 @@ const TaskDetailPage: React.FC = () => {
     );
     closeEffectModal();
     Taro.showToast({ title: '评价已保存，复盘资料已更新', icon: 'success' });
-    console.log('[TaskDetail] 处置效果评价（持久化）:', task.id, effectScore);
   }, [task.id, effectScore, effectNote, setTaskEffectiveness, addTaskLog, closeEffectModal]);
 
   const handleUrge = useCallback((e?: any) => {
@@ -187,7 +192,6 @@ const TaskDetailPage: React.FC = () => {
     closeUrgeModal();
     setUrgeRemark('');
     Taro.showToast({ title: '催办已发送', icon: 'success' });
-    console.log('[TaskDetail] 催办任务:', task.id, urgeRemark);
   }, [task.id, urgeRemark, urgeTask, closeUrgeModal]);
 
   const handleAddCoAssistant = useCallback((e?: any) => {
@@ -200,7 +204,6 @@ const TaskDetailPage: React.FC = () => {
     closeCoAssistModal();
     setCoAssistName('');
     Taro.showToast({ title: '协办人已添加', icon: 'success' });
-    console.log('[TaskDetail] 添加协办人:', task.id, coAssistName, coAssistRole);
   }, [task.id, coAssistName, coAssistRole, addCoAssistant, closeCoAssistModal]);
 
   const handleTransfer = useCallback((e?: any) => {
@@ -214,8 +217,14 @@ const TaskDetailPage: React.FC = () => {
     setTransferToName('');
     setTransferRemark('');
     Taro.showToast({ title: '任务已转办', icon: 'success' });
-    console.log('[TaskDetail] 转办任务:', task.id, transferToName, transferToRole, transferRemark);
   }, [task.id, transferToName, transferToRole, transferRemark, transferTask, closeTransferModal]);
+
+  const handleConfirmTransfer = useCallback((e?: any) => {
+    stopBubble(e);
+    if (!latestTransfer) return;
+    handleTransfer(task.id, latestTransfer.id);
+    Taro.showToast({ title: '已确认接手任务', icon: 'success' });
+  }, [task.id, latestTransfer, handleTransfer]);
 
   const getLogTypeConfig = (log: TaskLog) => {
     return LOG_TYPE_CONFIG[log.logType || 'normal'] || LOG_TYPE_CONFIG.normal;
@@ -242,6 +251,92 @@ const TaskDetailPage: React.FC = () => {
             </View>
           )}
         </View>
+
+        {/* 交接待确认提示 */}
+        {hasPendingTransfer && (
+          <View className={styles.transferNotice} onClick={e => stopBubble(e)}>
+            <View className={styles.transferNoticeHeader}>
+              <Text style={{ fontSize: '36rpx', marginRight: '12rpx' }}>🔔</Text>
+              <Text className={styles.transferNoticeTitle}>任务转办 · 等待确认接手</Text>
+            </View>
+            <View className={styles.transferPath}>
+              <View className={styles.transferFrom}>
+                <Text className={styles.transferLabel}>原负责人</Text>
+                <View className={styles.transferPerson}>
+                  <View className={styles.avatar} style={{ background: 'rgba(134, 144, 156, 0.2)', color: '#86909c' }}>
+                    <Text>{latestTransfer!.fromName.slice(0, 1)}</Text>
+                  </View>
+                  <Text style={{ marginLeft: '8rpx' }}>{latestTransfer!.fromName}</Text>
+                  <Text style={{ fontSize: '20rpx', color: '#86909c', marginLeft: '4rpx' }}>
+                    （{ASSIGNEE_ROLE_MAP[latestTransfer!.fromRole]}）
+                  </Text>
+                </View>
+              </View>
+              <View className={styles.transferArrow}>➡️</View>
+              <View className={styles.transferTo}>
+                <Text className={styles.transferLabel}>新负责人</Text>
+                <View className={styles.transferPerson}>
+                  <View className={styles.avatar} style={{ background: 'rgba(255, 125, 0, 0.15)', color: '#FF7D00' }}>
+                    <Text>{latestTransfer!.toName.slice(0, 1)}</Text>
+                  </View>
+                  <Text style={{ marginLeft: '8rpx', fontWeight: '600' }}>{latestTransfer!.toName}</Text>
+                  <Text style={{ fontSize: '20rpx', color: '#86909c', marginLeft: '4rpx' }}>
+                    （{ASSIGNEE_ROLE_MAP[latestTransfer!.toRole]}）
+                  </Text>
+                </View>
+              </View>
+            </View>
+            {latestTransfer!.remark && (
+              <View className={styles.transferRemark}>
+                <Text className={styles.transferRemarkLabel}>交接说明：</Text>
+                <Text className={styles.transferRemarkText}>{latestTransfer!.remark}</Text>
+              </View>
+            )}
+            <View className={styles.transferTime}>
+              发起时间：{latestTransfer!.timestamp}
+            </View>
+            <View className={styles.transferActionRow} onClick={stopBubble}>
+              <View className={styles.confirmHandoverBtn} onClick={handleConfirmTransfer}>
+                ✅ 确认接手
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* 完整转办历史 */}
+        {task.transferRecords.length > 0 && (
+          <View className={styles.transferHistorySection}>
+            <Text className={styles.sectionSmallTitle}>
+              🔄 交接历史（共{task.transferRecords.length}次）
+            </Text>
+            {task.transferRecords.map((tr, idx) => (
+              <View key={tr.id} className={styles.transferHistoryItem}>
+                <View className={styles.historyIndex}>#{idx + 1}</View>
+                <View style={{ flex: 1 }}>
+                  <View className={styles.historyFlow}>
+                    <Text style={{ fontWeight: '500' }}>{tr.fromName}</Text>
+                    <Text style={{ margin: '0 8rpx', color: '#FF7D00' }}>➡️</Text>
+                    <Text style={{ fontWeight: '500', color: '#165DFF' }}>{tr.toName}</Text>
+                    <View
+                      className={styles.handoverStatusTag}
+                      style={{
+                        background: tr.handled ? 'rgba(0,180,42,0.1)' : 'rgba(255,125,0,0.1)',
+                        color: tr.handled ? '#00B42A' : '#FF7D00',
+                        marginLeft: 'auto'
+                      }}
+                    >
+                      {tr.handled ? `已接手 · ${tr.handledAt?.slice(5, 16) || ''}` : '待接手'}
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: '20rpx', color: '#86909c', marginTop: '4rpx', display: 'block' }}>
+                    {tr.timestamp.slice(5, 16)}
+                    {tr.remark ? ` · 说明：${tr.remark}` : ''}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
         <View className={styles.infoRow}>
           <Text className={styles.infoLabel}>负责人</Text>
@@ -290,6 +385,33 @@ const TaskDetailPage: React.FC = () => {
                 {dueStatus.label}
               </View>
             )}
+          </View>
+        </View>
+
+        {/* 协同数据汇总 */}
+        <View className={styles.collaborationSummary}>
+          <View className={styles.collabItem}>
+            <Text style={{ fontSize: '28rpx' }}>⏰</Text>
+            <Text className={styles.collabNum}>{task.urgeRecords.length}</Text>
+            <Text className={styles.collabLabel}>催办</Text>
+          </View>
+          <View className={styles.collabDivider} />
+          <View className={styles.collabItem}>
+            <Text style={{ fontSize: '28rpx' }}>🤝</Text>
+            <Text className={styles.collabNum}>{task.coAssistants.length}</Text>
+            <Text className={styles.collabLabel}>协办</Text>
+          </View>
+          <View className={styles.collabDivider} />
+          <View className={styles.collabItem}>
+            <Text style={{ fontSize: '28rpx' }}>🔄</Text>
+            <Text className={styles.collabNum}>{task.transferRecords.length}</Text>
+            <Text className={styles.collabLabel}>转办</Text>
+          </View>
+          <View className={styles.collabDivider} />
+          <View className={styles.collabItem}>
+            <Text style={{ fontSize: '28rpx' }}>📝</Text>
+            <Text className={styles.collabNum}>{Math.max(0, task.logs.length - 1)}</Text>
+            <Text className={styles.collabLabel}>记录</Text>
           </View>
         </View>
 
@@ -360,14 +482,23 @@ const TaskDetailPage: React.FC = () => {
             <View className={styles.actionBtn} onClick={openUrgeModal}>
               <Text className={styles.actionIcon}>⏰</Text>
               <Text className={styles.actionText}>催办</Text>
+              {task.urgeRecords.length > 0 && (
+                <View className={styles.actionBadge}>{task.urgeRecords.length}</View>
+              )}
             </View>
             <View className={styles.actionBtn} onClick={openCoAssistModal}>
               <Text className={styles.actionIcon}>🤝</Text>
               <Text className={styles.actionText}>协办</Text>
+              {task.coAssistants.length > 0 && (
+                <View className={styles.actionBadge} style={{ background: '#165DFF' }}>{task.coAssistants.length}</View>
+              )}
             </View>
             <View className={styles.actionBtn} onClick={openTransferModal}>
               <Text className={styles.actionIcon}>🔄</Text>
               <Text className={styles.actionText}>转办</Text>
+              {task.transferRecords.length > 0 && (
+                <View className={styles.actionBadge} style={{ background: '#FF7D00' }}>{task.transferRecords.length}</View>
+              )}
             </View>
           </>
         )}
